@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+<title>لقطة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root{
+    --bg:#000000;
+    --surface:#121212;
+    --surface2:#1c1c1e;
+    --surface3:#242426;
+    --line:#2a2a2c;
+    --ink:#ffffff;
+    --ink-dim:#9a9a9e;
+    --red:#e60023;
+    --red-dim:#e6002326;
+    --green:#0aab5c;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-t: env(safe-area-inset-top, 0px);
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%; overscroll-behavior:none; overflow:hidden;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    overflow:hidden;
+  }
+  h1,h2,.brand,.btn,.pill,.count{font-family:'Cairo', sans-serif;}
+  button{font-family:inherit; color:inherit;}
+  img{-webkit-user-drag:none;}
+  svg{display:block; flex-shrink:0;}
+
+  /* ================= APP SHELL — fits the device viewport exactly ================= */
+  .app-shell{
+    height:100dvh; width:100%;
+    display:flex; flex-direction:column;
+    overflow:hidden;
+    background:var(--bg);
+  }
+
+  /* ================= TOP BAR ================= */
+  .topbar{
+    flex-shrink:0; z-index:30;
+    background:#000000f2;
+    padding:calc(10px + var(--safe-t)) 14px 10px;
+    overflow:hidden;
+  }
+  .topbar-row{ display:flex; align-items:center; gap:10px; flex-wrap:nowrap; }
+  .brand-mark{
+    font-family:'Cairo'; font-weight:900; font-size:19px;
+    display:flex; align-items:center; gap:6px; padding-left:4px;
+    flex-shrink:0;
+  }
+  .brand-mark .pin{ color:var(--red); font-size:20px; line-height:1; }
+  .search-wrap{
+    flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:8px;
+    background:var(--surface2); border-radius:24px;
+    padding:11px 16px; color:var(--ink-dim);
+  }
+  .search-wrap input{
+    flex:1; min-width:0; background:none; border:none; outline:none; color:var(--ink);
+    font-size:14px; font-family:'IBM Plex Sans Arabic';
+  }
+  .search-wrap input::placeholder{ color:var(--ink-dim); }
+  .icon-btn-flat{
+    width:38px; height:38px; border-radius:50%; border:none; cursor:pointer;
+    background:var(--surface2); color:var(--ink); display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:background .15s;
+  }
+  .icon-btn-flat.on{ background:var(--ink); color:#000; }
+
+  .tabs-strip{
+    display:flex; gap:8px; margin-top:12px; overflow-x:auto; scrollbar-width:none; align-items:center;
+  }
+  .tabs-strip::-webkit-scrollbar{display:none;}
+  .chip{
+    flex-shrink:0; padding:8px 16px; border-radius:20px; font-size:13px; font-weight:700;
+    background:var(--surface2); color:var(--ink-dim); border:none; cursor:pointer;
+    transition:background .15s, color .15s;
+    display:flex; align-items:center; gap:6px;
+  }
+  .chip.active{ background:var(--ink); color:#000; }
+  .chip-spacer{ flex:1; }
+
+  /* selection mode bar */
+  .selection-row{ display:none; align-items:center; gap:10px; }
+  .selection-row.show{ display:flex; }
+  .selection-row .count{ font-size:15px; font-weight:800; }
+  .selection-row .spacer{ flex:1; }
+  .sel-action{
+    width:38px; height:38px; border-radius:50%; border:none; cursor:pointer;
+    background:var(--surface2); color:var(--ink); display:flex; align-items:center; justify-content:center;
+  }
+  .sel-action.danger{ background:#3a1414; color:#ff6a5c; }
+
+  /* ================= FEED / MASONRY ================= */
+  main{
+    flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
+    padding:12px 10px 4px; overscroll-behavior-y:contain;
+  }
+  .grid{ column-count:2; column-gap:10px; }
+  .grid.dense{ column-count:3; }
+  @media(min-width:640px){.grid{column-count:3;} .grid.dense{column-count:4;}}
+  @media(min-width:900px){.grid{column-count:4;} .grid.dense{column-count:5;}}
+  @media(min-width:1300px){.grid{column-count:5;} .grid.dense{column-count:6;}}
+
+  .pin{
+    break-inside:avoid; margin-bottom:10px; position:relative;
+    border-radius:16px; overflow:hidden; background:var(--surface);
+    cursor:pointer;
+    opacity:0; transform:translateY(8px); animation:pop .4s ease forwards;
+    user-select:none;
+  }
+  @keyframes pop{ to{ opacity:1; transform:none; } }
+  .pin img{ width:100%; display:block; height:auto; transition:transform .18s ease, filter .18s ease; }
+  .pin.selected img{ transform:scale(.93); filter:brightness(.6); }
+  .pin .top-row{
+    position:absolute; top:8px; left:8px; right:8px;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    opacity:0; transition:opacity .15s ease;
+  }
+  .pin:active .top-row, .pin.touch .top-row{ opacity:1; }
+  body.selecting .pin .top-row{ opacity:0 !important; pointer-events:none; }
+  .dots-btn{
+    width:30px; height:30px; border-radius:50%; border:none; cursor:pointer;
+    background:#00000080; backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center; color:#fff;
+  }
+  .save-pill{
+    background:var(--red); color:#fff; border:none; border-radius:22px;
+    padding:9px 16px; font-family:'Cairo'; font-weight:800; font-size:13px;
+    cursor:pointer; box-shadow:0 3px 10px #00000066;
+    display:flex; align-items:center; gap:5px;
+  }
+  .save-pill.saved{ background:#fff; color:#111; }
+  .pin .fav-dot{
+    position:absolute; bottom:8px; right:8px; width:26px; height:26px; border-radius:50%;
+    background:#00000080; backdrop-filter:blur(4px); display:none;
+    align-items:center; justify-content:center;
+  }
+  .pin.is-fav .fav-dot{ display:flex; }
+
+  .select-badge{
+    position:absolute; top:8px; right:8px; width:26px; height:26px; border-radius:50%;
+    border:2px solid #fff; background:#00000080; display:none;
+    align-items:center; justify-content:center; z-index:2;
+  }
+  body.selecting .select-badge{ display:flex; }
+  .pin.selected .select-badge{ background:var(--red); border-color:var(--red); }
+
+  .skeleton{
+    break-inside:avoid; margin-bottom:10px; border-radius:16px;
+    background:linear-gradient(100deg, #121212 30%, #1e1e1e 50%, #121212 70%);
+    background-size:200% 100%; animation:shine 1.3s infinite;
+  }
+  @keyframes shine{ 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+
+  .empty{ text-align:center; padding:110px 24px 40px; color:var(--ink-dim); }
+  .empty .glyph{ font-size:46px; margin-bottom:16px; opacity:.5; }
+  .empty h2{ color:var(--ink); font-size:19px; margin-bottom:8px; font-family:'Cairo'; }
+  .empty .cta{
+    margin-top:18px; display:inline-block; background:var(--red); color:#fff;
+    padding:12px 26px; border-radius:24px; font-family:'Cairo'; font-weight:800; font-size:14px;
+    border:none; cursor:pointer;
+  }
+
+  /* ================= BOTTOM NAV ================= */
+  nav.tabbar{
+    flex-shrink:0; z-index:40;
+    background:#000000f2;
+    border-top:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-around;
+    padding:8px 6px calc(8px + var(--safe-b));
+  }
+  .tab-btn{
+    background:none; border:none; cursor:pointer; color:var(--ink-dim);
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    padding:4px 12px; border-radius:12px; transition:color .15s;
+  }
+  .tab-btn.active{ color:var(--ink); }
+  .tab-btn.add .add-circle{
+    width:34px; height:34px; border-radius:50%; background:var(--ink);
+    display:flex; align-items:center; justify-content:center; color:#000;
+  }
+
+  /* ================= DETAIL (PIN) VIEW ================= */
+  .detail{
+    position:fixed; inset:0; background:#000; z-index:60;
+    transform:translateY(100%); transition:transform .32s cubic-bezier(.2,.8,.2,1);
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
+  }
+  .detail.open{ transform:translateY(0); }
+  .detail-topbar{
+    position:sticky; top:0; z-index:5;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:calc(12px + var(--safe-t)) 14px 8px;
+  }
+  .round-btn{
+    width:38px; height:38px; border-radius:50%; border:none; cursor:pointer;
+    background:#1c1c1ecc; color:#fff; display:flex; align-items:center; justify-content:center;
+  }
+  .detail-img-wrap{
+    display:flex; justify-content:center; padding:2px 0 14px; background:#000;
+    overflow:hidden; touch-action:pan-y;
+  }
+  .detail-img-wrap img{
+    max-width:100%; max-height:78vh; width:auto; display:block;
+    transition:transform .25s ease; transform-origin:center center; cursor:zoom-in;
+  }
+  .detail-img-wrap img.zoomed{ transform:scale(1.9); cursor:zoom-out; }
+
+  .detail-actions{
+    display:flex; align-items:center; gap:10px; padding:6px 16px 16px;
+    border-bottom:1px solid var(--line);
+  }
+  .save-pill.big{ padding:11px 22px; font-size:14px; }
+  .icon-round{
+    width:42px; height:42px; border-radius:50%; border:1px solid var(--line);
+    background:var(--surface2); color:#fff; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; flex-shrink:0;
+  }
+  .spacer{ flex:1; }
+
+  .detail-meta{
+    display:flex; align-items:center; gap:12px; padding:16px;
+  }
+  .avatar{
+    width:42px; height:42px; border-radius:50%;
+    background:linear-gradient(135deg,#e60023,#7b0018);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Cairo'; font-weight:800; font-size:16px; color:#fff; flex-shrink:0;
+  }
+  .meta-text{ overflow:hidden; flex:1; }
+  .meta-name{ font-family:'Cairo'; font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .meta-sub{ font-size:12px; color:var(--ink-dim); margin-top:2px; }
+  .meta-edit{
+    width:38px; height:38px; border-radius:50%; border:none; background:var(--surface2);
+    color:var(--ink); display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+
+  .similar-section{ padding:4px 14px 30px; }
+  .similar-title{ font-family:'Cairo'; font-weight:800; font-size:15px; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+  .similar-title svg{ color:var(--red); }
+  .similar-grid{ column-count:2; column-gap:8px; }
+  @media(min-width:640px){ .similar-grid{ column-count:3; } }
+  @media(min-width:900px){ .similar-grid{ column-count:4; } }
+  .similar-pin{
+    break-inside:avoid; margin-bottom:8px; border-radius:14px; overflow:hidden; cursor:pointer;
+    background:var(--surface); position:relative;
+  }
+  .similar-pin img{ width:100%; display:block; height:auto; }
+  .similar-empty{ color:var(--ink-dim); font-size:13px; padding:6px 2px; }
+
+  .menu-sheet{
+    position:fixed; inset:0; background:#00000099; z-index:70;
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .menu-sheet.open{ display:flex; animation:fadeIn .15s ease; }
+  @keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
+  .menu-card{
+    background:var(--surface2); width:100%; max-width:520px;
+    border-radius:20px 20px 0 0; padding:10px 8px calc(14px + var(--safe-b));
+  }
+  .menu-item{
+    width:100%; text-align:right; background:none; border:none; color:var(--ink);
+    font-family:'IBM Plex Sans Arabic'; font-size:15px; padding:15px 16px;
+    display:flex; align-items:center; gap:12px; border-radius:12px; cursor:pointer;
+  }
+  .menu-item:active{ background:#ffffff0f; }
+  .menu-item.danger{ color:#ff5c4d; }
+  .menu-title{ padding:12px 16px 4px; font-size:13px; color:var(--ink-dim); }
+
+  .rename-box{ padding:8px 16px 4px; }
+  .rename-box input{
+    width:100%; background:var(--surface3); border:1px solid var(--line); color:var(--ink);
+    border-radius:12px; padding:12px 14px; font-size:14px; font-family:'IBM Plex Sans Arabic'; outline:none;
+  }
+  .rename-actions{ display:flex; gap:8px; padding:12px 16px 4px; }
+  .rename-actions button{
+    flex:1; padding:11px; border-radius:12px; border:none; font-family:'Cairo'; font-weight:700; cursor:pointer;
+  }
+  .rename-actions .cancel{ background:var(--surface3); color:var(--ink); }
+  .rename-actions .confirm{ background:var(--red); color:#fff; }
+
+  input[type=file]{ display:none; }
+
+  /* toast */
+  .toast{
+    position:fixed; bottom:calc(76px + var(--safe-b)); right:50%; transform:translateX(50%) translateY(14px);
+    background:#1c1c1e; border:1px solid var(--line); color:var(--ink);
+    padding:11px 18px; border-radius:12px; font-size:13px; z-index:200;
+    opacity:0; pointer-events:none; transition:all .3s ease;
+    display:flex; align-items:center; gap:12px; max-width:88vw;
+  }
+  .toast.show{ opacity:1; transform:translateX(50%) translateY(0); pointer-events:auto; }
+  .toast .undo-btn{
+    background:none; border:none; color:var(--red); font-family:'Cairo'; font-weight:800; font-size:13px; cursor:pointer; flex-shrink:0;
+  }
+
+  /* ================= PROFILE VIEW ================= */
+  .profile-view{ padding:20px 16px 10px; display:none; }
+  .profile-view.show{ display:block; }
+  .profile-head{ display:flex; align-items:center; gap:14px; margin-bottom:22px; }
+  .profile-avatar{
+    width:60px; height:60px; border-radius:50%;
+    background:linear-gradient(135deg,#e60023,#7b0018);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Cairo'; font-weight:900; font-size:24px; color:#fff;
+  }
+  .profile-name{ font-family:'Cairo'; font-weight:800; font-size:19px; }
+  .profile-sub{ color:var(--ink-dim); font-size:13px; margin-top:2px; }
+
+  .stat-cards{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:22px; }
+  .stat-card{
+    background:var(--surface2); border-radius:16px; padding:16px;
+  }
+  .stat-card .num{ font-family:'Cairo'; font-weight:900; font-size:26px; }
+  .stat-card .lbl{ color:var(--ink-dim); font-size:12px; margin-top:4px; }
+
+  .settings-group{ margin-bottom:20px; }
+  .settings-title{ font-family:'Cairo'; font-weight:700; font-size:14px; color:var(--ink-dim); margin-bottom:10px; padding:0 2px; }
+  .settings-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--surface2); border-radius:14px; padding:14px 16px; margin-bottom:8px;
+  }
+  .settings-row .label{ font-size:14px; }
+  .settings-row .label small{ display:block; color:var(--ink-dim); font-size:12px; margin-top:2px; }
+  .segmented{ display:flex; background:var(--surface3); border-radius:10px; padding:3px; gap:2px; }
+  .segmented button{
+    background:none; border:none; color:var(--ink-dim); font-size:12px; font-family:'Cairo'; font-weight:700;
+    padding:7px 12px; border-radius:8px; cursor:pointer;
+  }
+  .segmented button.active{ background:var(--ink); color:#000; }
+  .row-action-btn{
+    background:var(--surface3); border:none; color:var(--ink); border-radius:10px; padding:9px 16px;
+    font-family:'Cairo'; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px;
+  }
+  .row-action-btn.danger{ color:#ff6a5c; }
+
+  .import-textarea{
+    width:100%; background:var(--surface3); border:1px solid var(--line); color:var(--ink);
+    border-radius:12px; padding:12px 14px; font-size:13px; font-family:'IBM Plex Sans Arabic';
+    outline:none; resize:vertical; min-height:84px;
+  }
+  .import-note{ padding:2px 16px 8px; font-size:12px; color:var(--ink-dim); line-height:1.7; }
+  .import-log{
+    max-height:180px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;
+    padding:2px 16px 6px; font-size:12.5px; color:var(--ink-dim);
+  }
+  .import-log div{ direction:ltr; text-align:right; unicode-bidi:plaintext; word-break:break-all; }
+
+  .progress-wrap{
+    position:fixed; top:calc(var(--safe-t) + 2px); right:0; left:0; z-index:80;
+    display:none;
+  }
+  .progress-wrap.show{ display:block; }
+  .progress-bar-bg{ height:3px; background:#2a2a2c; }
+  .progress-bar-fill{ height:3px; background:var(--red); width:0%; transition:width .25s ease; }
+
+  /* ================= ALBUMS ================= */
+  .chip.folder-chip{ display:flex; align-items:center; gap:6px; }
+  .chip.new-album-chip{ background:transparent; border:1.5px dashed var(--line); color:var(--ink-dim); }
+  .album-dot{
+    position:absolute; bottom:8px; left:8px; height:24px; padding:0 9px; border-radius:12px;
+    background:#00000080; backdrop-filter:blur(4px); display:none;
+    align-items:center; gap:4px; font-size:11px; color:#fff; max-width:60%;
+  }
+  .pin.has-album .album-dot{ display:flex; }
+  .album-dot span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .album-list{ max-height:52vh; overflow-y:auto; }
+  .album-row{
+    width:100%; text-align:right; background:none; border:none; color:var(--ink);
+    font-family:'IBM Plex Sans Arabic'; font-size:15px; padding:14px 16px;
+    display:flex; align-items:center; gap:12px; border-radius:12px; cursor:pointer;
+  }
+  .album-row:active{ background:#ffffff0f; }
+  .album-row .folder-ic{ color:var(--ink-dim); flex-shrink:0; }
+  .album-row .check{ margin-right:auto; color:var(--red); opacity:0; }
+  .album-row.picked .check{ opacity:1; }
+  .album-row .count-sub{ color:var(--ink-dim); font-size:12px; margin-right:auto; }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+<div class="progress-wrap" id="progressWrap">
+  <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+</div>
+
+<header class="topbar">
+  <div class="topbar-row" id="normalRow">
+    <div class="brand-mark"><span class="pin">◉</span>لقطة</div>
+    <div class="search-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <input id="searchInput" type="text" placeholder="ابحث بالاسم">
+    </div>
+    <button class="icon-btn-flat" id="selectModeBtn" title="تحديد">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" stroke-width="2"/></svg>
+    </button>
+  </div>
+
+  <div class="topbar-row selection-row" id="selectionRow">
+    <button class="sel-action" id="selCancelBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+    <div class="count" id="selCount">0 محددة</div>
+    <div class="spacer"></div>
+    <button class="sel-action" id="selFavBtn" title="مفضّلة">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2 0 3.5 1 6 3.5C14.5 5 16 4 18 4c4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="sel-action" id="selZipBtn" title="تحميل ZIP">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 3v13m0 0l-4.5-4.5M12 16l4.5-4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <button class="sel-action" id="selMoveBtn" title="نقل لمجموعة">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="sel-action danger" id="selDeleteBtn" title="حذف">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+
+  <div class="tabs-strip" id="tabsStrip">
+    <button class="chip active" data-filter="all">الكل</button>
+    <button class="chip" data-filter="fav">المفضّلة</button>
+    <div id="albumChipsWrap" style="display:contents;"></div>
+    <button class="chip new-album-chip" id="newAlbumChip">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      مجموعة
+    </button>
+    <div class="chip-spacer"></div>
+    <button class="chip" id="sortBtn">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M7 4v16M7 4l-3 3M7 4l3 3M17 20V4M17 20l-3-3M17 20l3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span id="sortLabel">الأحدث</span>
+    </button>
+    <button class="chip" id="densityBtn" title="كثافة العرض">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/></svg>
+    </button>
+  </div>
+</header>
+
+<main>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="emptyState" style="display:none;">
+    <div class="glyph">◉</div>
+    <h2>ما عندك صور بعد</h2>
+    <div>اضغط زر الإضافة بالأسفل وابدأ ترفع</div>
+    <button class="cta" id="emptyUploadBtn">رفع أول صورة</button>
+  </div>
+
+  <div class="profile-view" id="profileView">
+    <div class="profile-head">
+      <div class="profile-avatar">ل</div>
+      <div>
+        <div class="profile-name">معرضي</div>
+        <div class="profile-sub">كل صورك محفوظة محليًا بهالمتصفح</div>
+      </div>
+    </div>
+
+    <div class="stat-cards">
+      <div class="stat-card"><div class="num" id="pCount">0</div><div class="lbl">إجمالي الصور</div></div>
+      <div class="stat-card"><div class="num" id="pFav">0</div><div class="lbl">المفضّلة</div></div>
+      <div class="stat-card"><div class="num" id="pSize">0</div><div class="lbl">المساحة المستخدمة</div></div>
+      <div class="stat-card"><div class="num" id="pMonth">0</div><div class="lbl">أُضيفت هالشهر</div></div>
+      <div class="stat-card"><div class="num" id="pAlbums">0</div><div class="lbl">المجموعات</div></div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-title">العرض</div>
+      <div class="settings-row">
+        <div class="label">كثافة الشبكة<small>عدد الأعمدة بالشاشة</small></div>
+        <div class="segmented" id="densitySeg">
+          <button data-d="normal" class="active">عادي</button>
+          <button data-d="dense">مكثّف</button>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="label">الترتيب<small>طريقة ترتيب الصور</small></div>
+        <div class="segmented" id="sortSeg">
+          <button data-s="newest" class="active">الأحدث</button>
+          <button data-s="oldest">الأقدم</button>
+          <button data-s="name">الاسم</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-title">إدارة</div>
+      <div class="settings-row">
+        <div class="label">استيراد من رابط<small>اسحب صور مباشرة من رابط موقع</small></div>
+        <button class="row-action-btn" id="importUrlBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 15l6-6M10 7l1.5-1.5a3 3 0 014.24 4.24L14 11.5M14 9l-1.5 1.5a3 3 0 01-4.24-4.24L9.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          استيراد
+        </button>
+      </div>
+      <div class="settings-row">
+        <div class="label">تصدير كل الصور<small>تحميل ملف ZIP واحد</small></div>
+        <button class="row-action-btn" id="exportAllBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3v13m0 0l-4.5-4.5M12 16l4.5-4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          تصدير
+        </button>
+      </div>
+      <div class="settings-row">
+        <div class="label">حذف كل الصور<small>هذا الإجراء ما ينرجع</small></div>
+        <button class="row-action-btn danger" id="clearAllBtn">مسح الكل</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<nav class="tabbar">
+  <button class="tab-btn active" data-view="home">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 10.5L12 3l9 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 9.5V21h14V9.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <button class="tab-btn" data-view="search">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <button class="tab-btn add" id="addTabBtn">
+    <span class="add-circle">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+    </span>
+  </button>
+  <button class="tab-btn" data-view="fav">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2 0 3.5 1 6 3.5C14.5 5 16 4 18 4c4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+  </button>
+  <button class="tab-btn" data-view="profile">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="2"/><path d="M4.5 20c1.6-3.6 4.5-5.5 7.5-5.5s5.9 1.9 7.5 5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+</nav>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" multiple>
+
+<!-- Detail (pin) fullscreen view -->
+<div class="detail" id="detail">
+  <div class="detail-topbar">
+    <button class="round-btn" id="detailBack">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="round-btn" id="detailMenuBtn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.8" fill="#fff"/><circle cx="12" cy="12" r="1.8" fill="#fff"/><circle cx="19" cy="12" r="1.8" fill="#fff"/></svg>
+    </button>
+  </div>
+  <div class="detail-img-wrap" id="detailImgWrap"><img id="detailImg" src="" alt=""></div>
+  <div class="detail-actions">
+    <button class="save-pill big" id="detailSave">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2 0 3.5 1 6 3.5C14.5 5 16 4 18 4c4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" fill="currentColor"/></svg>
+      <span id="detailSaveLabel">حفظ</span>
+    </button>
+    <div class="spacer"></div>
+    <button class="icon-round" id="detailDownload" title="تحميل">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3v13m0 0l-4.5-4.5M12 16l4.5-4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <button class="icon-round" id="detailShare" title="مشاركة">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="18" cy="5" r="2.4" stroke="currentColor" stroke-width="1.8"/><circle cx="6" cy="12" r="2.4" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="19" r="2.4" stroke="currentColor" stroke-width="1.8"/><line x1="8.1" y1="10.8" x2="15.9" y2="6.2" stroke="currentColor" stroke-width="1.8"/><line x1="8.1" y1="13.2" x2="15.9" y2="17.8" stroke="currentColor" stroke-width="1.8"/></svg>
+    </button>
+  </div>
+  <div class="detail-meta">
+    <div class="avatar" id="detailAvatar">ص</div>
+    <div class="meta-text">
+      <div class="meta-name" id="detailName"></div>
+      <div class="meta-sub" id="detailDate"></div>
+    </div>
+    <button class="meta-edit" id="detailRenameBtn" title="إعادة تسمية">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 20l4.2-.9L19.5 7.8a1.8 1.8 0 000-2.5l-1.3-1.3a1.8 1.8 0 00-2.5 0L4.9 15.3 4 20z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+  <div class="similar-section" id="similarSection">
+    <div class="similar-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="2" fill="currentColor"/><rect x="14" y="3" width="7" height="7" rx="2" fill="currentColor"/><rect x="3" y="14" width="7" height="7" rx="2" fill="currentColor"/><rect x="14" y="14" width="7" height="7" rx="2" fill="currentColor"/></svg>
+      صور مشابهة
+    </div>
+    <div class="similar-grid" id="similarGrid"></div>
+  </div>
+</div>
+
+<!-- "..." menu sheet (works for both grid pin and detail view) -->
+<div class="menu-sheet" id="menuSheet">
+  <div class="menu-card" id="menuCardDefault">
+    <button class="menu-item" id="menuDownload">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3v13m0 0l-4.5-4.5M12 16l4.5-4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      تحميل الصورة
+    </button>
+    <button class="menu-item" id="menuRename">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 20l4.2-.9L19.5 7.8a1.8 1.8 0 000-2.5l-1.3-1.3a1.8 1.8 0 00-2.5 0L4.9 15.3 4 20z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      إعادة تسمية
+    </button>
+    <button class="menu-item" id="menuMove">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      نقل لمجموعة
+    </button>
+    <button class="menu-item" id="menuFav">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2 0 3.5 1 6 3.5C14.5 5 16 4 18 4c4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      <span id="menuFavLabel">إضافة للمفضّلة</span>
+    </button>
+    <button class="menu-item danger" id="menuDelete">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      حذف الصورة
+    </button>
+  </div>
+  <div class="menu-card" id="menuCardRename" style="display:none;">
+    <div class="menu-title">إعادة تسمية الصورة</div>
+    <div class="rename-box"><input type="text" id="renameInput" maxlength="120"></div>
+    <div class="rename-actions">
+      <button class="cancel" id="renameCancel">إلغاء</button>
+      <button class="confirm" id="renameConfirm">حفظ</button>
+    </div>
+  </div>
+
+  <div class="menu-card" id="menuCardAlbums" style="display:none;">
+    <div class="menu-title">اختر مجموعة</div>
+    <div class="album-list" id="albumPickList"></div>
+    <div class="rename-actions">
+      <button class="cancel" id="albumPickCancel">إلغاء</button>
+    </div>
+  </div>
+
+  <div class="menu-card" id="menuCardNewAlbum" style="display:none;">
+    <div class="menu-title">اسم المجموعة الجديدة</div>
+    <div class="rename-box"><input type="text" id="newAlbumInput" maxlength="60" placeholder="مثلاً: رحلات، سكرين شوت…"></div>
+    <div class="rename-actions">
+      <button class="cancel" id="newAlbumCancel">إلغاء</button>
+      <button class="confirm" id="newAlbumConfirm">إنشاء</button>
+    </div>
+  </div>
+
+  <div class="menu-card" id="menuCardImport" style="display:none;">
+    <div class="menu-title">استيراد صور من رابط</div>
+    <div class="rename-box">
+      <textarea class="import-textarea" id="importUrlsInput" rows="4" placeholder="حط رابط صورة مباشر أو رابط صفحة — رابط بكل سطر"></textarea>
+    </div>
+    <div class="import-note">
+      يشتغل زين مع روابط الصور المباشرة (تنتهي بـ jpg/png/webp) أو مواقع تسمح بالوصول من متصفح خارجي. مواقع كثيرة تمنع هذا لأسباب أمنية بالمتصفح (سياسة CORS) — وبهالحالة تقدر تنزّل الصورة على جهازك وترفعها من "رفع من الجهاز".
+    </div>
+    <div class="import-log" id="importLog" style="display:none;"></div>
+    <div class="rename-actions">
+      <button class="cancel" id="importCancel">إغلاق</button>
+      <button class="confirm" id="importGoBtn">سحب الصور</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  const DB_NAME="lamha-gallery", STORE="images", ALBUM_STORE="albums";
+  let db;
+  function openDB(){
+    return new Promise((resolve,reject)=>{
+      const req=indexedDB.open(DB_NAME,2);
+      req.onupgradeneeded=(e)=>{
+        const d=req.result;
+        if(!d.objectStoreNames.contains(STORE)){
+          const s=d.createObjectStore(STORE,{keyPath:"id"});
+          s.createIndex("date","date");
+        }
+        if(!d.objectStoreNames.contains(ALBUM_STORE)){
+          d.createObjectStore(ALBUM_STORE,{keyPath:"id"});
+        }
+      };
+      req.onsuccess=()=>resolve(req.result);
+      req.onerror=()=>reject(req.error);
+    });
+  }
+  const tx=m=>db.transaction(STORE,m).objectStore(STORE);
+  const dbAdd=r=>new Promise((res,rej)=>{const q=tx("readwrite").add(r); q.onsuccess=()=>res(); q.onerror=()=>rej(q.error);});
+  const dbPut=r=>new Promise((res,rej)=>{const q=tx("readwrite").put(r); q.onsuccess=()=>res(); q.onerror=()=>rej(q.error);});
+  const dbDel=id=>new Promise((res,rej)=>{const q=tx("readwrite").delete(id); q.onsuccess=()=>res(); q.onerror=()=>rej(q.error);});
+  const dbAll=()=>new Promise((res,rej)=>{
+    const items=[]; const q=tx("readonly").openCursor();
+    q.onsuccess=e=>{const c=e.target.result; if(c){items.push(c.value); c.continue();} else res(items);};
+    q.onerror=()=>rej(q.error);
+  });
+
+  const atx=m=>db.transaction(ALBUM_STORE,m).objectStore(ALBUM_STORE);
+  const dbAddAlbum=r=>new Promise((res,rej)=>{const q=atx("readwrite").add(r); q.onsuccess=()=>res(); q.onerror=()=>rej(q.error);});
+  const dbAllAlbums=()=>new Promise((res,rej)=>{
+    const items=[]; const q=atx("readonly").openCursor();
+    q.onsuccess=e=>{const c=e.target.result; if(c){items.push(c.value); c.continue();} else res(items);};
+    q.onerror=()=>rej(q.error);
+  });
+
+  let images=[];
+  let albums=[];               // {id,name,date}
+  let currentAlbumId=null;     // null = no album filter
+  let currentFilter="all";     // all | fav
+  let searchTerm="";
+  let currentView="home";      // home | search | fav | profile
+  let sortBy="newest";         // newest | oldest | name
+  let dense=false;
+  let menuTargetId=null;
+  let detailId=null;
+  let selectionMode=false;
+  let selectedIds=new Set();
+  let pendingDeletes=new Map(); // id -> timeoutId
+
+  const grid=document.getElementById("grid");
+  const emptyState=document.getElementById("emptyState");
+  const profileView=document.getElementById("profileView");
+  const fileInput=document.getElementById("fileInput");
+  const toastEl=document.getElementById("toast");
+  const progressWrap=document.getElementById("progressWrap");
+  const progressFill=document.getElementById("progressFill");
+
+  function toast(msg, opts){
+    toastEl.innerHTML="";
+    const span=document.createElement("span");
+    span.textContent=msg;
+    toastEl.appendChild(span);
+    if(opts && opts.undo){
+      const btn=document.createElement("button");
+      btn.className="undo-btn"; btn.textContent="تراجع";
+      btn.addEventListener("click", opts.undo);
+      toastEl.appendChild(btn);
+    }
+    toastEl.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t=setTimeout(()=>toastEl.classList.remove("show"), opts && opts.duration ? opts.duration : 2200);
+  }
+
+  function uid(){ return "img_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,8); }
+
+  // ---------- Similarity engine (aHash + dHash + color layout) → powers "صور مشابهة" ----------
+  // Combines three signals per image, computed locally in-browser, no server/AI call:
+  //  - aHash: overall brightness pattern (8x8)
+  //  - dHash: gradient/structure pattern (captures shapes/edges, more robust than aHash alone)
+  //  - color layout: average RGB per 4x4 spatial cell (captures where colors sit, not just brightness)
+  function computeSignature(url){
+    return new Promise((resolve)=>{
+      try{
+        const img=new Image();
+        img.onload=()=>{
+          try{
+            const S=16;
+            const c=document.createElement("canvas");
+            c.width=S; c.height=S;
+            const ctx=c.getContext("2d");
+            ctx.drawImage(img,0,0,S,S);
+            const data=ctx.getImageData(0,0,S,S).data;
+            const gray=new Array(S*S);
+            for(let i=0;i<S*S;i++){ gray[i]=(data[i*4]+data[i*4+1]+data[i*4+2])/3; }
+
+            // aHash (8x8, averaging 2x2 blocks of the 16x16 grid)
+            const aVals=[];
+            for(let by=0;by<8;by++){
+              for(let bx=0;bx<8;bx++){
+                let sum=0;
+                for(let dy=0;dy<2;dy++) for(let dx=0;dx<2;dx++) sum+=gray[(by*2+dy)*S+(bx*2+dx)];
+                aVals.push(sum/4);
+              }
+            }
+            const aAvg=aVals.reduce((a,b)=>a+b,0)/64;
+            let aHash=""; for(const v of aVals) aHash += v>=aAvg?"1":"0";
+
+            // dHash (9x8 grid sampled from the 16x16 grayscale, compares neighbors horizontally)
+            const gw=9, gh=8, grid=[];
+            for(let gy=0; gy<gh; gy++){
+              const row=[];
+              for(let gx=0; gx<gw; gx++){
+                const sx=Math.min(S-1, Math.floor(gx*S/gw));
+                const sy=Math.min(S-1, Math.floor(gy*S/gh));
+                row.push(gray[sy*S+sx]);
+              }
+              grid.push(row);
+            }
+            let dHash="";
+            for(let gy=0;gy<gh;gy++) for(let gx=0;gx<gw-1;gx++) dHash += grid[gy][gx]>grid[gy][gx+1] ? "1":"0";
+
+            // color layout (4x4 spatial grid, average RGB per cell)
+            const color=[]; const cell=S/4;
+            for(let by=0;by<4;by++){
+              for(let bx=0;bx<4;bx++){
+                let r=0,g=0,b=0,n=0;
+                for(let dy=0;dy<cell;dy++) for(let dx=0;dx<cell;dx++){
+                  const x=bx*cell+dx, y=by*cell+dy, idx=(y*S+x)*4;
+                  r+=data[idx]; g+=data[idx+1]; b+=data[idx+2]; n++;
+                }
+                color.push(r/n, g/n, b/n);
+              }
+            }
+            resolve({a:aHash, d:dHash, c:color});
+          }catch(e){ resolve(null); }
+        };
+        img.onerror=()=>resolve(null);
+        img.src=url;
+      }catch(e){ resolve(null); }
+    });
+  }
+  function hamming(a,b){
+    if(!a || !b || a.length!==b.length) return a&&b?a.length:64;
+    let d=0;
+    for(let i=0;i<a.length;i++) if(a[i]!==b[i]) d++;
+    return d;
+  }
+  function colorDist(c1,c2){
+    if(!c1||!c2||c1.length!==c2.length) return 255;
+    let sum=0;
+    for(let i=0;i<c1.length;i++){ const diff=c1[i]-c2[i]; sum+=diff*diff; }
+    return Math.sqrt(sum/c1.length); // 0..255
+  }
+  function sigDistance(s1,s2){
+    if(!s1||!s2) return Infinity;
+    const da=hamming(s1.a,s2.a);          // 0..64 — overall brightness
+    const dd=hamming(s1.d,s2.d);          // 0..64 — structure/edges
+    const dc=colorDist(s1.c,s2.c)/255*64; // scaled to 0..64 — color layout
+    return da*0.8 + dd*1.4 + dc*1.6;      // structure + color weighted higher than raw brightness
+  }
+  async function ensureSig(rec){
+    if(rec.sig) return rec.sig;
+    const sig=await computeSignature(rec.url);
+    if(sig){ rec.sig=sig; try{ await dbPut(stripUrl(rec)); }catch(e){} }
+    return sig;
+  }
+  async function sigBacklogPass(){
+    const todo=images.filter(i=>!i.sig);
+    for(const rec of todo){
+      await ensureSig(rec);
+      await new Promise(r=>setTimeout(r,20));
+    }
+    if(detailId){ renderSimilar(detailId); }
+  }
+  function getSimilar(rec){
+    if(!rec || !rec.sig) return [];
+    const pool=baseList().filter(i=>i.id!==rec.id && i.sig);
+    const scored=pool.map(i=>{
+      let score=sigDistance(rec.sig, i.sig);
+      if(rec.albumId && i.albumId===rec.albumId) score-=8;
+      if(rec.fav && i.fav) score-=2;
+      return {item:i, score};
+    });
+    scored.sort((a,b)=>a.score-b.score);
+    return scored.map(s=>s.item); // ALL matching images, best match first — no cap
+  }
+  function renderSimilar(id){
+    const rec=images.find(i=>i.id===id);
+    const wrap=document.getElementById("similarGrid");
+    const section=document.getElementById("similarSection");
+    if(!rec){ section.style.display="none"; return; }
+    if(!rec.sig){
+      wrap.innerHTML=`<div class="similar-empty">جاري تحليل الصور…</div>`;
+      section.style.display="block";
+      return;
+    }
+    const list=getSimilar(rec);
+    if(!list.length){
+      wrap.innerHTML=`<div class="similar-empty">ما فيه صور ثانية بعد — ارفع أكثر</div>`;
+      section.style.display="block";
+      return;
+    }
+    wrap.innerHTML="";
+    list.forEach(item=>{
+      const p=document.createElement("div");
+      p.className="similar-pin";
+      const img=document.createElement("img");
+      img.src=item.url; img.loading="lazy"; img.alt=item.name;
+      p.appendChild(img);
+      p.addEventListener("click", ()=> openDetail(item.id));
+      wrap.appendChild(p);
+    });
+    section.style.display="block";
+  }
+
+
+  function baseList(){
+    return images.filter(i => !pendingDeletes.has(i.id));
+  }
+
+  function visibleList(){
+    let list=baseList();
+    if(currentFilter==="fav" || currentView==="fav") list=list.filter(i=>i.fav);
+    if(currentAlbumId) list=list.filter(i=>i.albumId===currentAlbumId);
+    if(searchTerm.trim()) list=list.filter(i=>i.name.toLowerCase().includes(searchTerm.trim().toLowerCase()));
+    list=list.slice().sort((a,b)=>{
+      if(sortBy==="newest") return b.date-a.date;
+      if(sortBy==="oldest") return a.date-b.date;
+      if(sortBy==="name") return a.name.localeCompare(b.name,"ar");
+      return 0;
+    });
+    return list;
+  }
+
+  function fmtDate(ts){
+    const d=new Date(ts);
+    return d.toLocaleDateString("ar-EG",{year:"numeric",month:"short",day:"numeric"});
+  }
+  function fmtSize(bytes){
+    if(bytes<1024) return bytes+" B";
+    if(bytes<1024*1024) return (bytes/1024).toFixed(1)+" KB";
+    return (bytes/(1024*1024)).toFixed(1)+" MB";
+  }
+
+  // ---------- Rendering: feed ----------
+  function renderGrid(){
+    const list=visibleList();
+    grid.innerHTML="";
+    const showEmpty = baseList().length===0;
+    emptyState.style.display = showEmpty ? "block" : "none";
+    grid.style.display = (currentView==="profile") ? "none" : "block";
+    emptyState.style.display = (currentView!=="profile" && showEmpty) ? "block" : "none";
+
+    if(currentView==="profile"){ renderProfile(); return; }
+
+    if(list.length===0 && !showEmpty){
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--ink-dim);padding:60px 20px;">ما فيه نتائج</div>`;
+      return;
+    }
+
+    list.forEach(rec=>{
+      const pin=document.createElement("div");
+      pin.className="pin"+(rec.fav?" is-fav":"")+(selectedIds.has(rec.id)?" selected":"")+(rec.albumId?" has-album":"");
+      pin.dataset.id=rec.id;
+
+      const img=document.createElement("img");
+      img.src=rec.url; img.loading="lazy"; img.alt=rec.name;
+
+      const topRow=document.createElement("div");
+      topRow.className="top-row";
+      const dotsBtn=document.createElement("button");
+      dotsBtn.className="dots-btn";
+      dotsBtn.innerHTML=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.8" fill="#fff"/><circle cx="12" cy="12" r="1.8" fill="#fff"/><circle cx="19" cy="12" r="1.8" fill="#fff"/></svg>`;
+      dotsBtn.addEventListener("click",e=>{ e.stopPropagation(); openMenu(rec.id); });
+      const saveBtn=document.createElement("button");
+      saveBtn.className="save-pill"+(rec.fav?" saved":"");
+      saveBtn.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2 0 3.5 1 6 3.5C14.5 5 16 4 18 4c4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" fill="currentColor"/></svg>${rec.fav?"محفوظة":"حفظ"}`;
+      saveBtn.addEventListener("click",e=>{ e.stopPropagation(); toggleFav(rec.id); });
+      topRow.append(dotsBtn, saveBtn);
+
+      const favDot=document.createElement("div");
+      favDot.className="fav-dot";
+      favDot.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2 0 3.5 1 6 3.5C14.5 5 16 4 18 4c4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" fill="#e60023"/></svg>`;
+
+      const selBadge=document.createElement("div");
+      selBadge.className="select-badge";
+      selBadge.innerHTML = selectedIds.has(rec.id) ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>` : "";
+
+      const albumDot=document.createElement("div");
+      albumDot.className="album-dot";
+      if(rec.albumId){
+        const alb=albums.find(a=>a.id===rec.albumId);
+        const albName=alb?alb.name:"";
+        albumDot.title=albName;
+        albumDot.innerHTML=`<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke="#fff" stroke-width="2"/></svg><span>${albName}</span>`;
+      }
+
+      pin.append(img, topRow, favDot, selBadge, albumDot);
+
+      let pressTimer=null;
+      const startPress=()=>{ pressTimer=setTimeout(()=>{ enterSelection(rec.id); pressTimer=null; }, 480); };
+      const cancelPress=()=>{ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } };
+      pin.addEventListener("pointerdown", startPress);
+      pin.addEventListener("pointerup", cancelPress);
+      pin.addEventListener("pointerleave", cancelPress);
+      pin.addEventListener("pointercancel", cancelPress);
+
+      pin.addEventListener("click", ()=>{
+        if(selectionMode){ toggleSelect(rec.id); }
+        else{ openDetail(rec.id); }
+      });
+      grid.appendChild(pin);
+    });
+  }
+
+  // ---------- Albums ----------
+  function renderAlbumChips(){
+    const wrap=document.getElementById("albumChipsWrap");
+    wrap.innerHTML="";
+    albums.forEach(alb=>{
+      const chip=document.createElement("button");
+      chip.className="chip folder-chip"+(currentAlbumId===alb.id?" active":"");
+      chip.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>${alb.name}</span>`;
+      chip.addEventListener("click", ()=>{
+        currentAlbumId = currentAlbumId===alb.id ? null : alb.id;
+        renderAlbumChips();
+        renderGrid();
+      });
+      wrap.appendChild(chip);
+    });
+  }
+
+  function albumUid(){ return "alb_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,6); }
+
+  async function createAlbum(name){
+    const rec={ id:albumUid(), name, date:Date.now() };
+    await dbAddAlbum(rec);
+    albums.push(rec);
+    renderAlbumChips();
+    return rec;
+  }
+
+  function openAlbumPicker(targetIds){
+    const list=document.getElementById("albumPickList");
+    list.innerHTML="";
+    const singleId = targetIds.length===1 ? (images.find(i=>i.id===targetIds[0])||{}).albumId : null;
+
+    const noneRow=document.createElement("button");
+    noneRow.className="album-row"+(targetIds.length===1 && !singleId ? " picked":"");
+    noneRow.innerHTML=`<span class="folder-ic">—</span><span>بدون مجموعة</span><span class="check">✓</span>`;
+    noneRow.addEventListener("click", ()=>{ assignAlbum(targetIds, null); closeMenu(); });
+    list.appendChild(noneRow);
+
+    albums.forEach(alb=>{
+      const count=images.filter(i=>i.albumId===alb.id).length;
+      const row=document.createElement("button");
+      row.className="album-row"+(targetIds.length===1 && singleId===alb.id ? " picked":"");
+      row.innerHTML=`<svg class="folder-ic" width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>${alb.name}</span><span class="count-sub">${count}</span><span class="check">✓</span>`;
+      row.addEventListener("click", ()=>{ assignAlbum(targetIds, alb.id); closeMenu(); });
+      list.appendChild(row);
+    });
+
+    const newRow=document.createElement("button");
+    newRow.className="album-row";
+    newRow.innerHTML=`<svg class="folder-ic" width="17" height="17" viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span>مجموعة جديدة…</span>`;
+    newRow.addEventListener("click", ()=>{ pendingMoveIds=targetIds; openNewAlbumSheet(); });
+    list.appendChild(newRow);
+
+    menuCardDefault.style.display="none";
+    menuCardRename.style.display="none";
+    menuCardAlbums.style.display="block";
+    menuCardNewAlbum.style.display="none";
+    menuCardImport.style.display="none";
+    menuSheet.classList.add("open");
+  }
+
+  async function assignAlbum(ids, albumId){
+    for(const id of ids){
+      const rec=images.find(i=>i.id===id);
+      if(rec){ rec.albumId=albumId; await dbPut(stripUrl(rec)); }
+    }
+    renderGrid();
+    if(detailId && ids.includes(detailId)) syncDetailIfOpen(detailId);
+    toast(albumId ? "تم النقل للمجموعة" : "تمت الإزالة من المجموعة");
+  }
+
+  let pendingMoveIds=null;
+  function openNewAlbumSheet(){
+    document.getElementById("newAlbumInput").value="";
+    menuCardDefault.style.display="none";
+    menuCardRename.style.display="none";
+    menuCardAlbums.style.display="none";
+    menuCardNewAlbum.style.display="block";
+    menuCardImport.style.display="none";
+    menuSheet.classList.add("open");
+    setTimeout(()=>document.getElementById("newAlbumInput").focus(),150);
+  }
+
+  function addSkeleton(){
+    const s=document.createElement("div");
+    s.className="skeleton";
+    s.style.height=(150+Math.random()*180)+"px";
+    grid.prepend(s);
+    return s;
+  }
+
+  // ---------- Profile view ----------
+  function renderProfile(){
+    const list=baseList();
+    document.getElementById("pCount").textContent=list.length;
+    document.getElementById("pFav").textContent=list.filter(i=>i.fav).length;
+    const totalBytes=list.reduce((sum,i)=>sum+(i.blob?i.blob.size:0),0);
+    document.getElementById("pSize").textContent=fmtSize(totalBytes);
+    const now=new Date();
+    const thisMonth=list.filter(i=>{
+      const d=new Date(i.date);
+      return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
+    }).length;
+    document.getElementById("pMonth").textContent=thisMonth;
+    document.getElementById("pAlbums").textContent=albums.length;
+  }
+
+  // ---------- Favorite / delete / download ----------
+  async function toggleFav(id){
+    const rec=images.find(i=>i.id===id);
+    if(!rec) return;
+    rec.fav=!rec.fav;
+    await dbPut(stripUrl(rec));
+    renderGrid();
+    syncDetailIfOpen(id);
+  }
+  function stripUrl(rec){ const {url, ...rest}=rec; return rest; }
+
+  function removeImageSoft(id){
+    const rec=images.find(i=>i.id===id);
+    if(!rec) return;
+    renderGrid();
+    if(detailId===id) closeDetail();
+    const t=setTimeout(async ()=>{
+      pendingDeletes.delete(id);
+      await dbDel(id);
+      URL.revokeObjectURL(rec.url);
+      images=images.filter(i=>i.id!==id);
+      renderGrid();
+    }, 4000);
+    pendingDeletes.set(id, t);
+    toast("تم حذف الصورة", { undo: ()=>undoDelete(id), duration:4000 });
+  }
+  function undoDelete(id){
+    const t=pendingDeletes.get(id);
+    if(t){ clearTimeout(t); pendingDeletes.delete(id); renderGrid(); toast("تم التراجع"); }
+  }
+  function confirmDelete(id){
+    const rec=images.find(i=>i.id===id);
+    if(!rec) return;
+    removeImageSoft(id);
+  }
+
+  function downloadImage(rec){
+    const a=document.createElement("a");
+    a.href=rec.url; a.download=rec.name||"image.jpg";
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  async function shareImage(rec){
+    try{
+      if(navigator.share){
+        const resp=await fetch(rec.url); const blob=await resp.blob();
+        const file=new File([blob], rec.name, {type: blob.type});
+        if(navigator.canShare && navigator.canShare({files:[file]})){
+          await navigator.share({files:[file], title:rec.name});
+          return;
+        }
+      }
+    }catch(e){ /* fall through */ }
+    downloadImage(rec);
+    toast("تم التحميل (المشاركة المباشرة غير مدعومة بهالمتصفح)");
+  }
+
+  async function downloadZip(list, filename){
+    if(!list.length) return;
+    if(typeof JSZip==="undefined"){ toast("تعذّر تجهيز أداة الضغط"); return; }
+    toast("جاري تجهيز ملف ZIP…");
+    const zip=new JSZip();
+    const used=new Set();
+    for(const rec of list){
+      let name=rec.name || "image";
+      if(used.has(name)){
+        const parts=name.split(".");
+        const ext=parts.length>1?parts.pop():"";
+        name=parts.join(".")+"_"+rec.id.slice(-4)+(ext?"."+ext:"");
+      }
+      used.add(name);
+      zip.file(name, rec.blob);
+    }
+    const content=await zip.generateAsync({type:"blob"});
+    const url=URL.createObjectURL(content);
+    const a=document.createElement("a");
+    a.href=url; a.download=filename||"lamha-photos.zip";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    toast("تم تحميل الملف المضغوط");
+  }
+
+  // ---------- Upload: each file inserted individually ----------
+  function handleFiles(fileList){
+    const files=Array.from(fileList).filter(f=>f.type.startsWith("image/"));
+    if(!files.length) return;
+    let done=0; const total=files.length;
+    progressWrap.classList.add("show"); progressFill.style.width="2%";
+    const bump=()=>{
+      done++;
+      progressFill.style.width=Math.round((done/total)*100)+"%";
+      if(done>=total){ setTimeout(()=>{ progressWrap.classList.remove("show"); progressFill.style.width="0%"; }, 400); }
+    };
+    files.forEach(file=>{
+      const skeleton=addSkeleton();
+      const reader=new FileReader();
+      reader.onload=async ()=>{
+        const blob=new Blob([reader.result],{type:file.type});
+        const record={ id:uid(), name:file.name, type:file.type, date:Date.now(), fav:false, blob:blob };
+        try{
+          await dbAdd(record);
+          const withUrl={...record, url:URL.createObjectURL(blob)};
+          images.unshift(withUrl);
+          ensureSig(withUrl).then(()=>{ if(detailId) renderSimilar(detailId); });
+        }catch(err){ console.error(err); toast("فشل حفظ: "+file.name); }
+        finally{ skeleton.remove(); renderGrid(); bump(); }
+      };
+      reader.onerror=()=>{ skeleton.remove(); toast("تعذّرت قراءة: "+file.name); bump(); };
+      reader.readAsArrayBuffer(file);
+    });
+    toast(total>1 ? `جاري رفع ${total} صور، كل وحدة لحالها…` : "جاري رفع الصورة…");
+  }
+
+  // ---------- Import from URL (best-effort — subject to browser CORS restrictions) ----------
+  async function addImageFromBlob(blob, name){
+    const record={ id:uid(), name: name||("image_"+uid()+".jpg"), type: blob.type||"image/jpeg", date:Date.now(), fav:false, blob:blob };
+    await dbAdd(record);
+    const withUrl={...record, url:URL.createObjectURL(blob)};
+    images.unshift(withUrl);
+    renderGrid();
+    ensureSig(withUrl).then(()=>{ if(detailId) renderSimilar(detailId); });
+    return withUrl;
+  }
+  async function fetchImageAsBlob(url){
+    const resp=await fetch(url, {mode:"cors", credentials:"omit"});
+    if(!resp.ok) throw new Error("HTTP "+resp.status);
+    const ct=resp.headers.get("content-type")||"";
+    if(!ct.startsWith("image/")) throw new Error("NOT_IMAGE");
+    return await resp.blob();
+  }
+  function nameFromUrl(url){
+    try{
+      const clean=url.split("?")[0].split("#")[0];
+      const last=decodeURIComponent(clean.split("/").filter(Boolean).pop()||"");
+      return last || ("image_"+uid()+".jpg");
+    }catch(e){ return "image_"+uid()+".jpg"; }
+  }
+  function extractImageUrlsFromHtml(html, baseUrl){
+    try{
+      const doc=new DOMParser().parseFromString(html, "text/html");
+      const found=Array.from(doc.querySelectorAll("img[src], img[data-src]")).map(el=>{
+        const src=el.getAttribute("src")||el.getAttribute("data-src");
+        try{ return new URL(src, baseUrl).href; }catch(e){ return null; }
+      }).filter(Boolean);
+      return Array.from(new Set(found)).slice(0,40);
+    }catch(e){ return []; }
+  }
+  async function importOneUrl(url){
+    // Attempt 1: treat as a direct image URL
+    try{
+      const blob=await fetchImageAsBlob(url);
+      await addImageFromBlob(blob, nameFromUrl(url));
+      return {ok:true, count:1};
+    }catch(e1){ /* fall through to page-scrape attempt */ }
+    // Attempt 2: treat as a webpage, try to pull its <img> tags (works only if the site allows cross-origin access)
+    try{
+      const resp=await fetch(url, {mode:"cors", credentials:"omit"});
+      if(!resp.ok) throw new Error("HTTP "+resp.status);
+      const html=await resp.text();
+      const imgUrls=extractImageUrlsFromHtml(html, url);
+      if(!imgUrls.length) return {ok:false, error:"no_images"};
+      let success=0;
+      for(const iu of imgUrls){
+        try{ const blob=await fetchImageAsBlob(iu); await addImageFromBlob(blob, nameFromUrl(iu)); success++; }
+        catch(e){ /* skip this one, keep going */ }
+      }
+      return success>0 ? {ok:true, count:success} : {ok:false, error:"blocked"};
+    }catch(e2){
+      return {ok:false, error:"blocked"};
+    }
+  }
+  async function runImport(){
+    const raw=document.getElementById("importUrlsInput").value;
+    const lines=Array.from(new Set(raw.split("\n").map(s=>s.trim()).filter(Boolean)));
+    if(!lines.length){ toast("حط رابط وحد على الأقل"); return; }
+    const btn=document.getElementById("importGoBtn");
+    const logWrap=document.getElementById("importLog");
+    btn.disabled=true; btn.textContent="جاري السحب…";
+    logWrap.style.display="flex"; logWrap.innerHTML="";
+    let successTotal=0, failTotal=0;
+    for(const url of lines){
+      const line=document.createElement("div");
+      line.textContent="⏳ "+url;
+      logWrap.appendChild(line);
+      logWrap.scrollTop=logWrap.scrollHeight;
+      try{
+        const res=await importOneUrl(url);
+        if(res.ok){
+          successTotal += (res.count||1);
+          line.textContent = "✓ "+url+(res.count>1 ? ` — ${res.count} صور` : "");
+        }else{
+          failTotal++;
+          line.textContent = "✗ "+url+(res.error==="no_images" ? " — ما لقيت صور بالصفحة" : " — الموقع يمنع الوصول من متصفح خارجي (CORS)");
+        }
+      }catch(e){
+        failTotal++;
+        line.textContent="✗ "+url+" — فشل غير متوقع";
+      }
+      logWrap.scrollTop=logWrap.scrollHeight;
+    }
+    btn.disabled=false; btn.textContent="سحب الصور";
+    toast(failTotal ? `تم استيراد ${successTotal} صورة — وتعذّر سحب ${failTotal}` : `تم استيراد ${successTotal} صورة`);
+  }
+
+  // ---------- Detail view ----------
+  const detail=document.getElementById("detail");
+  const detailImg=document.getElementById("detailImg");
+  const detailImgWrap=document.getElementById("detailImgWrap");
+  const detailName=document.getElementById("detailName");
+  const detailDate=document.getElementById("detailDate");
+  const detailAvatar=document.getElementById("detailAvatar");
+  const detailSave=document.getElementById("detailSave");
+  const detailSaveLabel=document.getElementById("detailSaveLabel");
+
+  function openDetail(id){
+    const rec=images.find(i=>i.id===id);
+    if(!rec) return;
+    detailId=id;
+    detailImg.src=rec.url;
+    detailImg.classList.remove("zoomed");
+    detailName.textContent=rec.name;
+    detailDate.textContent=fmtDate(rec.date)+(rec.viewCount?" · شوهدت "+rec.viewCount+" مرة":"");
+    detailAvatar.textContent=(rec.name||"ص").trim().charAt(0).toUpperCase();
+    syncDetailIfOpen(id);
+    detail.classList.add("open");
+    document.body.style.overflow="hidden";
+    detail.scrollTop=0;
+
+    rec.viewCount=(rec.viewCount||0)+1;
+    rec.lastViewed=Date.now();
+    dbPut(stripUrl(rec)).catch(()=>{});
+
+    if(rec.sig){ renderSimilar(id); }
+    else{
+      document.getElementById("similarGrid").innerHTML=`<div class="similar-empty">جاري تحليل الصور…</div>`;
+      document.getElementById("similarSection").style.display="block";
+      ensureSig(rec).then(()=>{ if(detailId===id) renderSimilar(id); });
+    }
+  }
+  function syncDetailIfOpen(id){
+    if(detailId!==id) return;
+    const rec=images.find(i=>i.id===id);
+    if(!rec) return;
+    detailSave.classList.toggle("saved", !!rec.fav);
+    detailSaveLabel.textContent = rec.fav ? "محفوظة" : "حفظ";
+    detailName.textContent=rec.name;
+  }
+  function closeDetail(){
+    detail.classList.remove("open");
+    document.body.style.overflow="";
+    detailId=null;
+  }
+  document.getElementById("detailBack").addEventListener("click", closeDetail);
+  detailSave.addEventListener("click", ()=>{ if(detailId) toggleFav(detailId); });
+  document.getElementById("detailDownload").addEventListener("click", ()=>{
+    const rec=images.find(i=>i.id===detailId); if(rec) downloadImage(rec);
+  });
+  document.getElementById("detailShare").addEventListener("click", ()=>{
+    const rec=images.find(i=>i.id===detailId); if(rec) shareImage(rec);
+  });
+  document.getElementById("detailMenuBtn").addEventListener("click", ()=>{
+    if(detailId) openMenu(detailId);
+  });
+  detailImg.addEventListener("dblclick", ()=> detailImg.classList.toggle("zoomed"));
+  detailImg.addEventListener("click", ()=>{ if(detailImg.classList.contains("zoomed")) detailImg.classList.remove("zoomed"); });
+  document.getElementById("detailRenameBtn").addEventListener("click", ()=>{
+    if(detailId) openRename(detailId);
+  });
+
+  // ---------- "..." menu sheet ----------
+  const menuSheet=document.getElementById("menuSheet");
+  const menuCardDefault=document.getElementById("menuCardDefault");
+  const menuCardRename=document.getElementById("menuCardRename");
+  const menuCardAlbums=document.getElementById("menuCardAlbums");
+  const menuCardNewAlbum=document.getElementById("menuCardNewAlbum");
+  const menuCardImport=document.getElementById("menuCardImport");
+  function hideAllMenuCards(){
+    menuCardDefault.style.display="none";
+    menuCardRename.style.display="none";
+    menuCardAlbums.style.display="none";
+    menuCardNewAlbum.style.display="none";
+    menuCardImport.style.display="none";
+  }
+  const menuFavLabel=document.getElementById("menuFavLabel");
+  const renameInput=document.getElementById("renameInput");
+
+  function openMenu(id){
+    menuTargetId=id;
+    const rec=images.find(i=>i.id===id);
+    menuFavLabel.textContent = rec && rec.fav ? "إزالة من المفضّلة" : "إضافة للمفضّلة";
+    hideAllMenuCards();
+    menuCardDefault.style.display="block";
+    menuSheet.classList.add("open");
+  }
+  function closeMenu(){ menuSheet.classList.remove("open"); menuTargetId=null; }
+  function openRename(id){
+    menuTargetId=id;
+    const rec=images.find(i=>i.id===id);
+    renameInput.value = rec ? rec.name : "";
+    hideAllMenuCards();
+    menuCardRename.style.display="block";
+    menuSheet.classList.add("open");
+    setTimeout(()=>renameInput.focus(), 150);
+  }
+  menuSheet.addEventListener("click", e=>{ if(e.target===menuSheet) closeMenu(); });
+  document.getElementById("menuDownload").addEventListener("click", ()=>{
+    const rec=images.find(i=>i.id===menuTargetId); if(rec) downloadImage(rec); closeMenu();
+  });
+  document.getElementById("menuRename").addEventListener("click", ()=> openRename(menuTargetId));
+  document.getElementById("menuMove").addEventListener("click", ()=>{
+    if(menuTargetId) openAlbumPicker([menuTargetId]);
+  });
+  document.getElementById("albumPickCancel").addEventListener("click", closeMenu);
+  document.getElementById("newAlbumCancel").addEventListener("click", ()=>{ pendingMoveIds=null; closeMenu(); });
+  document.getElementById("newAlbumConfirm").addEventListener("click", async ()=>{
+    const name=document.getElementById("newAlbumInput").value.trim();
+    if(!name){ toast("اكتب اسم للمجموعة"); return; }
+    const alb=await createAlbum(name);
+    if(pendingMoveIds){ await assignAlbum(pendingMoveIds, alb.id); pendingMoveIds=null; }
+    else{ toast("تم إنشاء المجموعة"); }
+    closeMenu();
+  });
+  document.getElementById("menuFav").addEventListener("click", ()=>{
+    if(menuTargetId) toggleFav(menuTargetId); closeMenu();
+  });
+  document.getElementById("menuDelete").addEventListener("click", ()=>{
+    const id=menuTargetId; closeMenu(); if(id) confirmDelete(id);
+  });
+  document.getElementById("renameCancel").addEventListener("click", closeMenu);
+  document.getElementById("renameConfirm").addEventListener("click", async ()=>{
+    const id=menuTargetId;
+    const newName=renameInput.value.trim();
+    const rec=images.find(i=>i.id===id);
+    if(rec && newName){
+      rec.name=newName;
+      await dbPut(stripUrl(rec));
+      renderGrid();
+      syncDetailIfOpen(id);
+    }
+    closeMenu();
+  });
+
+  // ---------- Selection mode ----------
+  function enterSelection(firstId){
+    selectionMode=true;
+    document.body.classList.add("selecting");
+    document.getElementById("normalRow").style.display="none";
+    document.getElementById("selectionRow").classList.add("show");
+    if(firstId) selectedIds.add(firstId);
+    updateSelCount();
+    renderGrid();
+  }
+  function exitSelection(){
+    selectionMode=false;
+    selectedIds.clear();
+    document.body.classList.remove("selecting");
+    document.getElementById("normalRow").style.display="flex";
+    document.getElementById("selectionRow").classList.remove("show");
+    renderGrid();
+  }
+  function toggleSelect(id){
+    if(selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+    if(selectedIds.size===0){ exitSelection(); return; }
+    updateSelCount();
+    renderGrid();
+  }
+  function updateSelCount(){
+    document.getElementById("selCount").textContent = selectedIds.size + " محددة";
+  }
+  document.getElementById("selectModeBtn").addEventListener("click", ()=>{
+    if(selectionMode) exitSelection(); else enterSelection(null);
+  });
+  document.getElementById("selCancelBtn").addEventListener("click", exitSelection);
+  document.getElementById("selFavBtn").addEventListener("click", async ()=>{
+    const ids=Array.from(selectedIds);
+    for(const id of ids){
+      const rec=images.find(i=>i.id===id);
+      if(rec){ rec.fav=true; await dbPut(stripUrl(rec)); }
+    }
+    toast("انضافت للمفضّلة");
+    exitSelection();
+  });
+  document.getElementById("selZipBtn").addEventListener("click", ()=>{
+    const list=images.filter(i=>selectedIds.has(i.id));
+    downloadZip(list, "lamha-selected.zip");
+  });
+  document.getElementById("selMoveBtn").addEventListener("click", ()=>{
+    if(selectedIds.size) openAlbumPicker(Array.from(selectedIds));
+  });
+  document.getElementById("selDeleteBtn").addEventListener("click", ()=>{
+    const ids=Array.from(selectedIds);
+    if(!ids.length) return;
+    if(!confirm(`تحذف ${ids.length} صورة؟`)) return;
+    ids.forEach(id=> removeImageSoft(id));
+    exitSelection();
+  });
+
+  // ---------- Top chips (all / fav / sort / density) ----------
+  document.querySelectorAll('.chip[data-filter]').forEach(chip=>{
+    chip.addEventListener("click", ()=>{
+      document.querySelectorAll('.chip[data-filter]').forEach(c=>c.classList.remove("active"));
+      chip.classList.add("active");
+      currentFilter=chip.dataset.filter;
+      currentAlbumId=null;
+      renderAlbumChips();
+      renderGrid();
+    });
+  });
+
+  const sortLabels={newest:"الأحدث", oldest:"الأقدم", name:"الاسم"};
+  function setSort(val){
+    sortBy=val;
+    document.getElementById("sortLabel").textContent=sortLabels[val];
+    document.querySelectorAll('#sortSeg button').forEach(b=>b.classList.toggle("active", b.dataset.s===val));
+    renderGrid();
+  }
+  document.getElementById("sortBtn").addEventListener("click", ()=>{
+    const order=["newest","oldest","name"];
+    const next=order[(order.indexOf(sortBy)+1)%order.length];
+    setSort(next);
+  });
+  document.querySelectorAll('#sortSeg button').forEach(b=>{
+    b.addEventListener("click", ()=> setSort(b.dataset.s));
+  });
+
+  function setDensity(isDense){
+    dense=isDense;
+    grid.classList.toggle("dense", dense);
+    document.getElementById("densityBtn").classList.toggle("on", dense);
+    document.querySelectorAll('#densitySeg button').forEach(b=>b.classList.toggle("active", (b.dataset.d==="dense")===dense));
+  }
+  document.getElementById("densityBtn").addEventListener("click", ()=> setDensity(!dense));
+  document.querySelectorAll('#densitySeg button').forEach(b=>{
+    b.addEventListener("click", ()=> setDensity(b.dataset.d==="dense"));
+  });
+
+  document.getElementById("newAlbumChip").addEventListener("click", ()=>{
+    pendingMoveIds=null;
+    openNewAlbumSheet();
+  });
+
+  document.getElementById("importUrlBtn").addEventListener("click", ()=>{
+    document.getElementById("importUrlsInput").value="";
+    document.getElementById("importLog").style.display="none";
+    document.getElementById("importLog").innerHTML="";
+    document.getElementById("importGoBtn").disabled=false;
+    document.getElementById("importGoBtn").textContent="سحب الصور";
+    hideAllMenuCards();
+    menuCardImport.style.display="block";
+    menuSheet.classList.add("open");
+  });
+  document.getElementById("importCancel").addEventListener("click", closeMenu);
+  document.getElementById("importGoBtn").addEventListener("click", runImport);
+
+  // ---------- Search ----------
+  document.getElementById("searchInput").addEventListener("input", e=>{
+    searchTerm=e.target.value; renderGrid();
+  });
+
+  // ---------- Bottom tab bar ----------
+  document.querySelectorAll(".tab-btn[data-view]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      if(selectionMode) exitSelection();
+      document.querySelectorAll(".tab-btn[data-view]").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      currentView=btn.dataset.view;
+
+      profileView.classList.toggle("show", currentView==="profile");
+      document.querySelector("main").style.paddingTop = currentView==="profile" ? "0" : "";
+
+      if(currentView==="search"){
+        document.getElementById("searchInput").focus();
+      } else if(currentView==="fav"){
+        document.querySelectorAll('.chip[data-filter]').forEach(c=>c.classList.remove("active"));
+        document.querySelector('.chip[data-filter="fav"]').classList.add("active");
+        currentFilter="fav";
+      } else if(currentView==="home"){
+        document.querySelectorAll('.chip[data-filter]').forEach(c=>c.classList.remove("active"));
+        document.querySelector('.chip[data-filter="all"]').classList.add("active");
+        currentFilter="all";
+      }
+      renderGrid();
+    });
+  });
+
+  // ---------- Profile actions ----------
+  document.getElementById("exportAllBtn").addEventListener("click", ()=>{
+    downloadZip(baseList(), "lamha-photos.zip");
+  });
+  document.getElementById("clearAllBtn").addEventListener("click", async ()=>{
+    const list=baseList();
+    if(!list.length){ toast("ما فيه صور للحذف"); return; }
+    if(!confirm(`تحذف كل الصور (${list.length})؟ هذا الإجراء ما ينرجع.`)) return;
+    for(const rec of list){ await dbDel(rec.id); URL.revokeObjectURL(rec.url); }
+    images=[];
+    renderGrid();
+    toast("تم مسح كل الصور");
+  });
+
+  // ---------- Upload wiring ----------
+  document.getElementById("addTabBtn").addEventListener("click", ()=> fileInput.click());
+  document.getElementById("emptyUploadBtn").addEventListener("click", ()=> fileInput.click());
+  fileInput.addEventListener("change", e=>{ handleFiles(e.target.files); fileInput.value=""; });
+
+  ["dragover","drop"].forEach(ev=> window.addEventListener(ev, e=>e.preventDefault()));
+  window.addEventListener("drop", e=>{
+    if(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+  });
+
+  // ---------- Init ----------
+  (async function init(){
+    try{
+      db=await openDB();
+      const stored=await dbAll();
+      stored.sort((a,b)=>b.date-a.date);
+      images=stored.map(r=>({...r, url:URL.createObjectURL(r.blob)}));
+      albums=await dbAllAlbums();
+      renderAlbumChips();
+      renderGrid();
+      setTimeout(sigBacklogPass, 600);
+    }catch(err){
+      console.error(err);
+      toast("تعذّر فتح قاعدة البيانات المحلية");
+    }
+  })();
+
+})();
+</script>
+</body>
+</html>
