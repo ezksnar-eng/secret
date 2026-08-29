@@ -206,7 +206,7 @@
   }
   .detail-img-wrap{
     display:flex; justify-content:center; padding:2px 0 14px; background:#000;
-    overflow:hidden; touch-action:pan-y; position:relative; min-height:120px;
+    overflow:hidden; touch-action:pan-y;
   }
   .detail-img-wrap img{
     max-width:100%; max-height:78vh; width:auto; display:block;
@@ -384,28 +384,6 @@
   .album-row .check{ margin-right:auto; color:var(--red); opacity:0; }
   .album-row.picked .check{ opacity:1; }
   .album-row .count-sub{ color:var(--ink-dim); font-size:12px; margin-right:auto; }
-
-  /* ================= VIDEO + LAZY LOADING + PERF ================= */
-  .pin .video-badge{
-    position:absolute; top:8px; left:8px; width:28px; height:28px; border-radius:50%;
-    background:#00000090; backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center;
-  }
-  body.selecting .video-badge{ display:none; }
-  .pin .dur-badge{
-    position:absolute; bottom:8px; left:8px; height:22px; padding:0 8px; border-radius:11px;
-    background:#00000090; color:#fff; font-size:11px; display:flex; align-items:center;
-  }
-  .pin.has-album .dur-badge{ bottom:36px; }
-  .pin-ph{ width:100%; background:linear-gradient(100deg,#121212 30%,#1e1e1e 50%,#121212 70%); background-size:200% 100%; animation:shine 1.3s infinite; display:block; }
-  .detail-loading{
-    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-  }
-  .spin{
-    width:34px; height:34px; border-radius:50%; border:3px solid #3a3a3c; border-top-color:var(--red);
-    animation:spin .8s linear infinite;
-  }
-  @keyframes spin{ to{ transform:rotate(360deg); } }
-  #gridSentinel{ height:1px; break-inside:avoid; }
 </style>
 </head>
 <body>
@@ -471,8 +449,8 @@
   <div class="empty" id="emptyState" style="display:none;">
     <div class="glyph">◉</div>
     <h2>ما عندك صور بعد</h2>
-    <div>اضغط زر الإضافة بالأسفل وابدأ ترفع صور أو فيديوهات</div>
-    <button class="cta" id="emptyUploadBtn">رفع أول ملف</button>
+    <div>اضغط زر الإضافة بالأسفل وابدأ ترفع</div>
+    <button class="cta" id="emptyUploadBtn">رفع أول صورة</button>
   </div>
 
   <div class="profile-view" id="profileView">
@@ -485,8 +463,7 @@
     </div>
 
     <div class="stat-cards">
-      <div class="stat-card"><div class="num" id="pCount">0</div><div class="lbl">إجمالي الملفات</div></div>
-      <div class="stat-card"><div class="num" id="pVideos">0</div><div class="lbl">فيديوهات</div></div>
+      <div class="stat-card"><div class="num" id="pCount">0</div><div class="lbl">إجمالي الصور</div></div>
       <div class="stat-card"><div class="num" id="pFav">0</div><div class="lbl">المفضّلة</div></div>
       <div class="stat-card"><div class="num" id="pSize">0</div><div class="lbl">المساحة المستخدمة</div></div>
       <div class="stat-card"><div class="num" id="pMonth">0</div><div class="lbl">أُضيفت هالشهر</div></div>
@@ -557,7 +534,7 @@
 </nav>
 </div>
 
-<input type="file" id="fileInput" accept="image/*,video/*" multiple>
+<input type="file" id="fileInput" accept="image/*" multiple>
 
 <!-- Detail (pin) fullscreen view -->
 <div class="detail" id="detail">
@@ -569,11 +546,7 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.8" fill="#fff"/><circle cx="12" cy="12" r="1.8" fill="#fff"/><circle cx="19" cy="12" r="1.8" fill="#fff"/></svg>
     </button>
   </div>
-  <div class="detail-img-wrap" id="detailImgWrap">
-    <img id="detailImg" src="" alt="" style="display:none;">
-    <video id="detailVideo" controls playsinline style="display:none;max-width:100%;max-height:78vh;"></video>
-    <div class="detail-loading" id="detailLoading" style="display:none;"><div class="spin"></div></div>
-  </div>
+  <div class="detail-img-wrap" id="detailImgWrap"><img id="detailImg" src="" alt=""></div>
   <div class="detail-actions">
     <button class="save-pill big" id="detailSave">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2 0 3.5 1 6 3.5C14.5 5 16 4 18 4c4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" fill="currentColor"/></svg>
@@ -611,7 +584,7 @@
   <div class="menu-card" id="menuCardDefault">
     <button class="menu-item" id="menuDownload">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3v13m0 0l-4.5-4.5M12 16l4.5-4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      تحميل الملف
+      تحميل الصورة
     </button>
     <button class="menu-item" id="menuRename">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 20l4.2-.9L19.5 7.8a1.8 1.8 0 000-2.5l-1.3-1.3a1.8 1.8 0 00-2.5 0L4.9 15.3 4 20z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
@@ -627,7 +600,7 @@
     </button>
     <button class="menu-item danger" id="menuDelete">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      حذف الملف
+      حذف الصورة
     </button>
   </div>
   <div class="menu-card" id="menuCardRename" style="display:none;">
@@ -678,25 +651,13 @@
 (function(){
   "use strict";
 
-  // ============================================================
-  // DB LAYER — split into 3 stores so we never load binary data
-  // we don't need: meta (fast, always fully loaded), blobs
-  // (original file, fetched on demand), thumbs (small preview,
-  // fetched only when a pin actually scrolls into view).
-  // This is the fix for "hangs with thousands of photos": the old
-  // version loaded every original file into memory + created an
-  // object URL for all of them at startup, and rendered the whole
-  // grid in one go. Now startup only reads lightweight metadata,
-  // and both the grid and the media itself load incrementally.
-  // ============================================================
-  const DB_NAME="lamha-gallery", STORE="images", ALBUM_STORE="albums", BLOB_STORE="blobs", THUMB_STORE="thumbs";
+  const DB_NAME="lamha-gallery", STORE="images", ALBUM_STORE="albums";
   let db;
   function openDB(){
     return new Promise((resolve,reject)=>{
-      const req=indexedDB.open(DB_NAME,3);
+      const req=indexedDB.open(DB_NAME,2);
       req.onupgradeneeded=(e)=>{
         const d=req.result;
-        const tx=req.transaction;
         if(!d.objectStoreNames.contains(STORE)){
           const s=d.createObjectStore(STORE,{keyPath:"id"});
           s.createIndex("date","date");
@@ -704,97 +665,20 @@
         if(!d.objectStoreNames.contains(ALBUM_STORE)){
           d.createObjectStore(ALBUM_STORE,{keyPath:"id"});
         }
-        if(!d.objectStoreNames.contains(BLOB_STORE)){
-          d.createObjectStore(BLOB_STORE,{keyPath:"id"});
-        }
-        if(!d.objectStoreNames.contains(THUMB_STORE)){
-          d.createObjectStore(THUMB_STORE,{keyPath:"id"});
-        }
-        // migrate old records (v2 schema kept the original blob inside the "images" store)
-        if(e.oldVersion>0 && e.oldVersion<3){
-          const imgStore=tx.objectStore(STORE);
-          const blobStore=tx.objectStore(BLOB_STORE);
-          const cur=imgStore.openCursor();
-          cur.onsuccess=(ev)=>{
-            const cursor=ev.target.result;
-            if(cursor){
-              const val=cursor.value;
-              if(val.blob){
-                blobStore.put({id:val.id, blob:val.blob});
-                const meta={...val}; delete meta.blob;
-                if(!meta.kind) meta.kind="image";
-                if(!meta.size && val.blob.size) meta.size=val.blob.size;
-                cursor.update(meta);
-              }
-              cursor.continue();
-            }
-          };
-        }
       };
       req.onsuccess=()=>resolve(req.result);
       req.onerror=()=>reject(req.error);
     });
   }
-
   const tx=m=>db.transaction(STORE,m).objectStore(STORE);
   const dbAdd=r=>new Promise((res,rej)=>{const q=tx("readwrite").add(r); q.onsuccess=()=>res(); q.onerror=()=>rej(q.error);});
   const dbPut=r=>new Promise((res,rej)=>{const q=tx("readwrite").put(r); q.onsuccess=()=>res(); q.onerror=()=>rej(q.error);});
+  const dbDel=id=>new Promise((res,rej)=>{const q=tx("readwrite").delete(id); q.onsuccess=()=>res(); q.onerror=()=>rej(q.error);});
   const dbAll=()=>new Promise((res,rej)=>{
     const items=[]; const q=tx("readonly").openCursor();
     q.onsuccess=e=>{const c=e.target.result; if(c){items.push(c.value); c.continue();} else res(items);};
     q.onerror=()=>rej(q.error);
   });
-
-  function dbDel(id){
-    return new Promise((res,rej)=>{
-      const t=db.transaction([STORE,BLOB_STORE,THUMB_STORE],"readwrite");
-      t.objectStore(STORE).delete(id);
-      t.objectStore(BLOB_STORE).delete(id);
-      t.objectStore(THUMB_STORE).delete(id);
-      t.oncomplete=()=>res();
-      t.onerror=()=>rej(t.error);
-    });
-  }
-  function dbClearAllMedia(){
-    return new Promise((res,rej)=>{
-      const t=db.transaction([STORE,BLOB_STORE,THUMB_STORE],"readwrite");
-      t.objectStore(STORE).clear();
-      t.objectStore(BLOB_STORE).clear();
-      t.objectStore(THUMB_STORE).clear();
-      t.oncomplete=()=>res();
-      t.onerror=()=>rej(t.error);
-    });
-  }
-  function dbAddFull(meta, blob, thumbBlob){
-    return new Promise((res,rej)=>{
-      const t=db.transaction([STORE,BLOB_STORE,THUMB_STORE],"readwrite");
-      t.objectStore(STORE).add(meta);
-      t.objectStore(BLOB_STORE).add({id:meta.id, blob});
-      if(thumbBlob) t.objectStore(THUMB_STORE).add({id:meta.id, blob:thumbBlob});
-      t.oncomplete=()=>res();
-      t.onerror=()=>rej(t.error);
-    });
-  }
-  function dbGetBlob(id){
-    return new Promise((res,rej)=>{
-      const q=db.transaction(BLOB_STORE,"readonly").objectStore(BLOB_STORE).get(id);
-      q.onsuccess=()=>res(q.result?q.result.blob:null);
-      q.onerror=()=>rej(q.error);
-    });
-  }
-  function dbGetThumb(id){
-    return new Promise((res,rej)=>{
-      const q=db.transaction(THUMB_STORE,"readonly").objectStore(THUMB_STORE).get(id);
-      q.onsuccess=()=>res(q.result?q.result.blob:null);
-      q.onerror=()=>rej(q.error);
-    });
-  }
-  function dbPutThumb(id, blob){
-    return new Promise((res,rej)=>{
-      const q=db.transaction(THUMB_STORE,"readwrite").objectStore(THUMB_STORE).put({id,blob});
-      q.onsuccess=()=>res(); q.onerror=()=>rej(q.error);
-    });
-  }
 
   const atx=m=>db.transaction(ALBUM_STORE,m).objectStore(ALBUM_STORE);
   const dbAddAlbum=r=>new Promise((res,rej)=>{const q=atx("readwrite").add(r); q.onsuccess=()=>res(); q.onerror=()=>rej(q.error);});
@@ -805,18 +689,18 @@
   });
 
   let images=[];
-  let albums=[];
-  let currentAlbumId=null;
-  let currentFilter="all";
+  let albums=[];               // {id,name,date}
+  let currentAlbumId=null;     // null = no album filter
+  let currentFilter="all";     // all | fav
   let searchTerm="";
-  let currentView="home";
-  let sortBy="newest";
+  let currentView="home";      // home | search | fav | profile
+  let sortBy="newest";         // newest | oldest | name
   let dense=false;
   let menuTargetId=null;
   let detailId=null;
   let selectionMode=false;
   let selectedIds=new Set();
-  let pendingDeletes=new Map();
+  let pendingDeletes=new Map(); // id -> timeoutId
 
   const grid=document.getElementById("grid");
   const emptyState=document.getElementById("emptyState");
@@ -844,7 +728,150 @@
 
   function uid(){ return "img_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,8); }
 
-  function baseList(){ return images.filter(i => !pendingDeletes.has(i.id)); }
+  // ---------- Similarity engine (aHash + dHash + color layout) → powers "صور مشابهة" ----------
+  // Combines three signals per image, computed locally in-browser, no server/AI call:
+  //  - aHash: overall brightness pattern (8x8)
+  //  - dHash: gradient/structure pattern (captures shapes/edges, more robust than aHash alone)
+  //  - color layout: average RGB per 4x4 spatial cell (captures where colors sit, not just brightness)
+  function computeSignature(url){
+    return new Promise((resolve)=>{
+      try{
+        const img=new Image();
+        img.onload=()=>{
+          try{
+            const S=16;
+            const c=document.createElement("canvas");
+            c.width=S; c.height=S;
+            const ctx=c.getContext("2d");
+            ctx.drawImage(img,0,0,S,S);
+            const data=ctx.getImageData(0,0,S,S).data;
+            const gray=new Array(S*S);
+            for(let i=0;i<S*S;i++){ gray[i]=(data[i*4]+data[i*4+1]+data[i*4+2])/3; }
+
+            // aHash (8x8, averaging 2x2 blocks of the 16x16 grid)
+            const aVals=[];
+            for(let by=0;by<8;by++){
+              for(let bx=0;bx<8;bx++){
+                let sum=0;
+                for(let dy=0;dy<2;dy++) for(let dx=0;dx<2;dx++) sum+=gray[(by*2+dy)*S+(bx*2+dx)];
+                aVals.push(sum/4);
+              }
+            }
+            const aAvg=aVals.reduce((a,b)=>a+b,0)/64;
+            let aHash=""; for(const v of aVals) aHash += v>=aAvg?"1":"0";
+
+            // dHash (9x8 grid sampled from the 16x16 grayscale, compares neighbors horizontally)
+            const gw=9, gh=8, grid=[];
+            for(let gy=0; gy<gh; gy++){
+              const row=[];
+              for(let gx=0; gx<gw; gx++){
+                const sx=Math.min(S-1, Math.floor(gx*S/gw));
+                const sy=Math.min(S-1, Math.floor(gy*S/gh));
+                row.push(gray[sy*S+sx]);
+              }
+              grid.push(row);
+            }
+            let dHash="";
+            for(let gy=0;gy<gh;gy++) for(let gx=0;gx<gw-1;gx++) dHash += grid[gy][gx]>grid[gy][gx+1] ? "1":"0";
+
+            // color layout (4x4 spatial grid, average RGB per cell)
+            const color=[]; const cell=S/4;
+            for(let by=0;by<4;by++){
+              for(let bx=0;bx<4;bx++){
+                let r=0,g=0,b=0,n=0;
+                for(let dy=0;dy<cell;dy++) for(let dx=0;dx<cell;dx++){
+                  const x=bx*cell+dx, y=by*cell+dy, idx=(y*S+x)*4;
+                  r+=data[idx]; g+=data[idx+1]; b+=data[idx+2]; n++;
+                }
+                color.push(r/n, g/n, b/n);
+              }
+            }
+            resolve({a:aHash, d:dHash, c:color});
+          }catch(e){ resolve(null); }
+        };
+        img.onerror=()=>resolve(null);
+        img.src=url;
+      }catch(e){ resolve(null); }
+    });
+  }
+  function hamming(a,b){
+    if(!a || !b || a.length!==b.length) return a&&b?a.length:64;
+    let d=0;
+    for(let i=0;i<a.length;i++) if(a[i]!==b[i]) d++;
+    return d;
+  }
+  function colorDist(c1,c2){
+    if(!c1||!c2||c1.length!==c2.length) return 255;
+    let sum=0;
+    for(let i=0;i<c1.length;i++){ const diff=c1[i]-c2[i]; sum+=diff*diff; }
+    return Math.sqrt(sum/c1.length); // 0..255
+  }
+  function sigDistance(s1,s2){
+    if(!s1||!s2) return Infinity;
+    const da=hamming(s1.a,s2.a);          // 0..64 — overall brightness
+    const dd=hamming(s1.d,s2.d);          // 0..64 — structure/edges
+    const dc=colorDist(s1.c,s2.c)/255*64; // scaled to 0..64 — color layout
+    return da*0.8 + dd*1.4 + dc*1.6;      // structure + color weighted higher than raw brightness
+  }
+  async function ensureSig(rec){
+    if(rec.sig) return rec.sig;
+    const sig=await computeSignature(rec.url);
+    if(sig){ rec.sig=sig; try{ await dbPut(stripUrl(rec)); }catch(e){} }
+    return sig;
+  }
+  async function sigBacklogPass(){
+    const todo=images.filter(i=>!i.sig);
+    for(const rec of todo){
+      await ensureSig(rec);
+      await new Promise(r=>setTimeout(r,20));
+    }
+    if(detailId){ renderSimilar(detailId); }
+  }
+  function getSimilar(rec){
+    if(!rec || !rec.sig) return [];
+    const pool=baseList().filter(i=>i.id!==rec.id && i.sig);
+    const scored=pool.map(i=>{
+      let score=sigDistance(rec.sig, i.sig);
+      if(rec.albumId && i.albumId===rec.albumId) score-=8;
+      if(rec.fav && i.fav) score-=2;
+      return {item:i, score};
+    });
+    scored.sort((a,b)=>a.score-b.score);
+    return scored.map(s=>s.item); // ALL matching images, best match first — no cap
+  }
+  function renderSimilar(id){
+    const rec=images.find(i=>i.id===id);
+    const wrap=document.getElementById("similarGrid");
+    const section=document.getElementById("similarSection");
+    if(!rec){ section.style.display="none"; return; }
+    if(!rec.sig){
+      wrap.innerHTML=`<div class="similar-empty">جاري تحليل الصور…</div>`;
+      section.style.display="block";
+      return;
+    }
+    const list=getSimilar(rec);
+    if(!list.length){
+      wrap.innerHTML=`<div class="similar-empty">ما فيه صور ثانية بعد — ارفع أكثر</div>`;
+      section.style.display="block";
+      return;
+    }
+    wrap.innerHTML="";
+    list.forEach(item=>{
+      const p=document.createElement("div");
+      p.className="similar-pin";
+      const img=document.createElement("img");
+      img.src=item.url; img.loading="lazy"; img.alt=item.name;
+      p.appendChild(img);
+      p.addEventListener("click", ()=> openDetail(item.id));
+      wrap.appendChild(p);
+    });
+    section.style.display="block";
+  }
+
+
+  function baseList(){
+    return images.filter(i => !pendingDeletes.has(i.id));
+  }
 
   function visibleList(){
     let list=baseList();
@@ -865,888 +892,81 @@
     return d.toLocaleDateString("ar-EG",{year:"numeric",month:"short",day:"numeric"});
   }
   function fmtSize(bytes){
-    if(!bytes) return "0 B";
     if(bytes<1024) return bytes+" B";
     if(bytes<1024*1024) return (bytes/1024).toFixed(1)+" KB";
-    if(bytes<1024*1024*1024) return (bytes/(1024*1024)).toFixed(1)+" MB";
-    return (bytes/(1024*1024*1024)).toFixed(2)+" GB";
-  }
-  function fmtDuration(sec){
-    if(!sec || !isFinite(sec)) return "";
-    sec=Math.round(sec);
-    const m=Math.floor(sec/60), s=sec%60;
-    return m+":"+String(s).padStart(2,"0");
-  }
-  function stripForSave(rec){
-    const {url, blob, fullUrl, thumbUrl, _blobPromise, _thumbPromise, sig, ...rest}=rec;
-    const out={...rest};
-    if(rec.sig) out.sig=rec.sig;
-    return out;
+    return (bytes/(1024*1024)).toFixed(1)+" MB";
   }
 
-  // ============================================================
-  // MEDIA HELPERS — dimensions + downscaled thumbnail generation.
-  // The grid NEVER touches the original file; it only ever shows
-  // a small JPEG thumb, which is what makes scrolling through
-  // thousands of items smooth. Full-resolution originals are
-  // fetched on demand only when a photo/video is actually opened,
-  // downloaded, shared or zipped.
-  // ============================================================
-  function getMediaDims(file, kind){
-    return new Promise((resolve)=>{
-      try{
-        if(kind==="video"){
-          const v=document.createElement("video");
-          v.preload="metadata"; v.muted=true; v.playsInline=true;
-          const url=URL.createObjectURL(file);
-          v.onloadedmetadata=()=>{
-            resolve({w:v.videoWidth||0, h:v.videoHeight||0, duration:v.duration||0});
-            URL.revokeObjectURL(url);
-          };
-          v.onerror=()=>{ URL.revokeObjectURL(url); resolve({w:0,h:0,duration:0}); };
-          v.src=url;
-        }else if(window.createImageBitmap){
-          createImageBitmap(file).then(bmp=>{
-            resolve({w:bmp.width,h:bmp.height,duration:0});
-            if(bmp.close) bmp.close();
-          }).catch(()=>resolve({w:0,h:0,duration:0}));
-        }else{
-          const img=new Image();
-          const url=URL.createObjectURL(file);
-          img.onload=()=>{ resolve({w:img.naturalWidth,h:img.naturalHeight,duration:0}); URL.revokeObjectURL(url); };
-          img.onerror=()=>{ URL.revokeObjectURL(url); resolve({w:0,h:0,duration:0}); };
-          img.src=url;
-        }
-      }catch(e){ resolve({w:0,h:0,duration:0}); }
-    });
-  }
-
-  function generateThumb(file, kind){
-    return new Promise((resolve)=>{
-      const MAX=480;
-      try{
-        if(kind==="video"){
-          const v=document.createElement("video");
-          v.preload="metadata"; v.muted=true; v.playsInline=true;
-          const url=URL.createObjectURL(file);
-          v.onloadeddata=()=>{
-            try{ v.currentTime=Math.min(0.8,(v.duration||1)/2); }
-            catch(e){ URL.revokeObjectURL(url); resolve(null); }
-          };
-          v.onseeked=()=>{
-            try{
-              const w=v.videoWidth||MAX, h=v.videoHeight||MAX;
-              const scale=Math.min(1, MAX/Math.max(w,h));
-              const c=document.createElement("canvas");
-              c.width=Math.max(1,Math.round(w*scale)); c.height=Math.max(1,Math.round(h*scale));
-              c.getContext("2d").drawImage(v,0,0,c.width,c.height);
-              c.toBlob(b=>{ URL.revokeObjectURL(url); resolve(b); }, "image/jpeg", 0.75);
-            }catch(e){ URL.revokeObjectURL(url); resolve(null); }
-          };
-          v.onerror=()=>{ URL.revokeObjectURL(url); resolve(null); };
-          v.src=url;
-        }else{
-          const finish=(w,h,drawSrc)=>{
-            const scale=Math.min(1, MAX/Math.max(w,h));
-            const c=document.createElement("canvas");
-            c.width=Math.max(1,Math.round(w*scale)); c.height=Math.max(1,Math.round(h*scale));
-            c.getContext("2d").drawImage(drawSrc,0,0,c.width,c.height);
-            c.toBlob(b=>resolve(b), "image/jpeg", 0.78);
-          };
-          if(window.createImageBitmap){
-            createImageBitmap(file).then(bmp=>{ finish(bmp.width,bmp.height,bmp); if(bmp.close) bmp.close(); })
-              .catch(()=>resolve(null));
-          }else{
-            const img=new Image();
-            const url=URL.createObjectURL(file);
-            img.onload=()=>{ finish(img.naturalWidth,img.naturalHeight,img); URL.revokeObjectURL(url); };
-            img.onerror=()=>{ URL.revokeObjectURL(url); resolve(null); };
-            img.src=url;
-          }
-        }
-      }catch(e){ resolve(null); }
-    });
-  }
-
-  async function ensureThumbUrl(rec){
-    if(rec.thumbUrl) return rec.thumbUrl;
-    if(rec._thumbPromise) return rec._thumbPromise;
-    rec._thumbPromise=(async()=>{
-      let blob=await dbGetThumb(rec.id);
-      if(!blob){
-        // self-heal: legacy record with no cached thumb yet — build one now from the original
-        const full=await dbGetBlob(rec.id);
-        if(full){
-          blob=await generateThumb(full, rec.kind||"image");
-          if(blob){ try{ await dbPutThumb(rec.id, blob); }catch(e){} }
-          else blob=full; // last resort: use the original directly
-        }
-      }
-      if(blob) rec.thumbUrl=URL.createObjectURL(blob);
-      return rec.thumbUrl||null;
-    })();
-    return rec._thumbPromise;
-  }
-  async function ensureFullBlob(rec){
-    if(rec.blob) return rec.blob;
-    if(rec._blobPromise) return rec._blobPromise;
-    rec._blobPromise=dbGetBlob(rec.id).then(blob=>{ if(blob) rec.blob=blob; return blob; });
-    return rec._blobPromise;
-  }
-  async function ensureFullUrl(rec){
-    if(rec.fullUrl) return rec.fullUrl;
-    const blob=await ensureFullBlob(rec);
-    if(blob) rec.fullUrl=URL.createObjectURL(blob);
-    return rec.fullUrl||null;
-  }
-
-  // ============================================================
-  // SIMILARITY ENGINE (aHash + dHash + color layout) — runs off
-  // the small thumbnail, not the original, so it stays fast even
-  // with a huge library. Images only; videos are skipped.
-  // ============================================================
-  function computeSignature(url){
-    return new Promise((resolve)=>{
-      try{
-        const img=new Image();
-        img.onload=()=>{
-          try{
-            const S=16;
-            const c=document.createElement("canvas");
-            c.width=S; c.height=S;
-            const ctx=c.getContext("2d");
-            ctx.drawImage(img,0,0,S,S);
-            const data=ctx.getImageData(0,0,S,S).data;
-            const gray=new Array(S*S);
-            for(let i=0;i<S*S;i++){ gray[i]=(data[i*4]+data[i*4+1]+data[i*4+2])/3; }
-            const aVals=[];
-            for(let by=0;by<8;by++) for(let bx=0;bx<8;bx++){
-              let sum=0;
-              for(let dy=0;dy<2;dy++) for(let dx=0;dx<2;dx++) sum+=gray[(by*2+dy)*S+(bx*2+dx)];
-              aVals.push(sum/4);
-            }
-            const aAvg=aVals.reduce((a,b)=>a+b,0)/64;
-            let aHash=""; for(const v of aVals) aHash+=v>=aAvg?"1":"0";
-
-            const gw=9, gh=8, grid2=[];
-            for(let gy=0; gy<gh; gy++){
-              const row=[];
-              for(let gx=0; gx<gw; gx++){
-                const sx=Math.min(S-1, Math.floor(gx*S/gw));
-                const sy=Math.min(S-1, Math.floor(gy*S/gh));
-                row.push(gray[sy*S+sx]);
-              }
-              grid2.push(row);
-            }
-            let dHash="";
-            for(let gy=0;gy<gh;gy++) for(let gx=0;gx<gw-1;gx++) dHash+=grid2[gy][gx]>grid2[gy][gx+1]?"1":"0";
-
-            const color=[]; const cell=S/4;
-            for(let by=0;by<4;by++) for(let bx=0;bx<4;bx++){
-              let r=0,g=0,b=0,n=0;
-              for(let dy=0;dy<cell;dy++) for(let dx=0;dx<cell;dx++){
-                const x=bx*cell+dx, y=by*cell+dy, idx=(y*S+x)*4;
-                r+=data[idx]; g+=data[idx+1]; b+=data[idx+2]; n++;
-              }
-              color.push(r/n,g/n,b/n);
-            }
-            resolve({a:aHash,d:dHash,c:color});
-          }catch(e){ resolve(null); }
-        };
-        img.onerror=()=>resolve(null);
-        img.src=url;
-      }catch(e){ resolve(null); }
-    });
-  }
-  function hamming(a,b){
-    if(!a||!b||a.length!==b.length) return a&&b?a.length:64;
-    let d=0; for(let i=0;i<a.length;i++) if(a[i]!==b[i]) d++;
-    return d;
-  }
-  function colorDist(c1,c2){
-    if(!c1||!c2||c1.length!==c2.length) return 255;
-    let sum=0; for(let i=0;i<c1.length;i++){ const diff=c1[i]-c2[i]; sum+=diff*diff; }
-    return Math.sqrt(sum/c1.length);
-  }
-  function sigDistance(s1,s2){
-    if(!s1||!s2) return Infinity;
-    const da=hamming(s1.a,s2.a), dd=hamming(s1.d,s2.d), dc=colorDist(s1.c,s2.c)/255*64;
-    return da*0.8+dd*1.4+dc*1.6;
-  }
-  async function ensureSig(rec){
-    if(rec.kind==="video") return null;
-    if(rec.sig) return rec.sig;
-    const thumbUrl=await ensureThumbUrl(rec);
-    if(!thumbUrl) return null;
-    const sig=await computeSignature(thumbUrl);
-    if(sig){ rec.sig=sig; try{ await dbPut(stripForSave({...rec,sig})); }catch(e){} }
-    return sig;
-  }
-  async function sigBacklogPass(){
-    const todo=images.filter(i=>i.kind!=="video" && !i.sig);
-    for(const rec of todo){
-      await ensureSig(rec);
-      await new Promise(r=>setTimeout(r,20));
-    }
-    if(detailId){ renderSimilar(detailId); }
-  }
-  function getSimilar(rec){
-    if(!rec || rec.kind==="video" || !rec.sig) return [];
-    const pool=baseList().filter(i=>i.id!==rec.id && i.kind!=="video" && i.sig);
-    const scored=pool.map(i=>{
-      let score=sigDistance(rec.sig, i.sig);
-      if(rec.albumId && i.albumId===rec.albumId) score-=8;
-      if(rec.fav && i.fav) score-=2;
-      return {item:i, score};
-    });
-    scored.sort((a,b)=>a.score-b.score);
-    return scored.map(s=>s.item);
-  }
-  async function renderSimilar(id){
-    const rec=images.find(i=>i.id===id);
-    const wrap=document.getElementById("similarGrid");
-    const section=document.getElementById("similarSection");
-    if(!rec || rec.kind==="video"){ section.style.display="none"; return; }
-    if(!rec.sig){
-      wrap.innerHTML=`<div class="similar-empty">جاري تحليل الصور…</div>`;
-      section.style.display="block";
-      return;
-    }
-    const list=getSimilar(rec);
-    if(!list.length){
-      wrap.innerHTML=`<div class="similar-empty">ما فيه صور ثانية بعد — ارفع أكثر</div>`;
-      section.style.display="block";
-      return;
-    }
-    wrap.innerHTML="";
-    section.style.display="block";
-    list.forEach(item=>{
-      const p=document.createElement("div");
-      p.className="similar-pin";
-      const img=document.createElement("img");
-      img.alt=item.name; img.loading="lazy";
-      p.appendChild(img);
-      p.addEventListener("click", ()=> openDetail(item.id));
-      wrap.appendChild(p);
-      ensureThumbUrl(item).then(url=>{ if(url) img.src=url; });
-    });
-  }
-
-  // ============================================================
-  // GRID RENDERING — chunked / incremental (infinite scroll) so
-  // we never build thousands of DOM nodes in one pass, plus a
-  // per-pin IntersectionObserver so a thumbnail is only fetched
-  // from IndexedDB once it actually scrolls near the viewport.
-  // ============================================================
-  const PAGE_SIZE=48;
-  let renderedCount=0;
-  let currentVisibleList=[];
-  let sentinelObserver=null;
-  let lazyThumbObserver=null;
-
-  function getLazyThumbObserver(){
-    if(lazyThumbObserver) return lazyThumbObserver;
-    lazyThumbObserver=new IntersectionObserver((entries)=>{
-      entries.forEach(en=>{
-        if(!en.isIntersecting) return;
-        const el=en.target;
-        lazyThumbObserver.unobserve(el);
-        const id=el.dataset.id;
-        const rec=images.find(i=>i.id===id);
-        if(!rec) return;
-        ensureThumbUrl(rec).then(url=>{
-          const img=el.querySelector("img");
-          if(img && url) img.src=url;
-          el.classList.add("loaded");
-        });
-      });
-    }, {root:document.querySelector("main"), rootMargin:"700px 0px"});
-    return lazyThumbObserver;
-  }
-
-  function buildPinEl(rec){
-    const pin=document.createElement("div");
-    pin.className="pin"+(rec.fav?" is-fav":"")+(selectedIds.has(rec.id)?" selected":"")+(rec.albumId?" has-album":"");
-    pin.dataset.id=rec.id;
-    if(rec.width && rec.height) pin.style.aspectRatio=rec.width+"/"+rec.height;
-
-    const img=document.createElement("img");
-    img.loading="lazy"; img.alt=rec.name;
-    img.className="pin-ph";
-    img.style.aspectRatio = (rec.width&&rec.height) ? (rec.width+"/"+rec.height) : "1/1";
-    img.style.minHeight="90px";
-
-    const topRow=document.createElement("div");
-    topRow.className="top-row";
-    const dotsBtn=document.createElement("button");
-    dotsBtn.className="dots-btn";
-    dotsBtn.innerHTML=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.8" fill="#fff"/><circle cx="12" cy="12" r="1.8" fill="#fff"/><circle cx="19" cy="12" r="1.8" fill="#fff"/></svg>`;
-    dotsBtn.addEventListener("click",e=>{ e.stopPropagation(); openMenu(rec.id); });
-    const saveBtn=document.createElement("button");
-    saveBtn.className="save-pill"+(rec.fav?" saved":"");
-    saveBtn.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2 0 3.5 1 6 3.5C14.5 5 16 4 18 4c4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" fill="currentColor"/></svg>${rec.fav?"محفوظة":"حفظ"}`;
-    saveBtn.addEventListener("click",e=>{ e.stopPropagation(); toggleFav(rec.id); });
-    topRow.append(dotsBtn, saveBtn);
-
-    const favDot=document.createElement("div");
-    favDot.className="fav-dot";
-    favDot.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2 0 3.5 1 6 3.5C14.5 5 16 4 18 4c4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" fill="#e60023"/></svg>`;
-
-    const selBadge=document.createElement("div");
-    selBadge.className="select-badge";
-    selBadge.innerHTML = selectedIds.has(rec.id) ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>` : "";
-
-    const albumDot=document.createElement("div");
-    albumDot.className="album-dot";
-    if(rec.albumId){
-      const alb=albums.find(a=>a.id===rec.albumId);
-      const albName=alb?alb.name:"";
-      albumDot.title=albName;
-      albumDot.innerHTML=`<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke="#fff" stroke-width="2"/></svg><span>${albName}</span>`;
-    }
-
-    pin.append(img, topRow, favDot, selBadge, albumDot);
-
-    if(rec.kind==="video"){
-      const vb=document.createElement("div");
-      vb.className="video-badge";
-      vb.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7-11-7z" fill="#fff"/></svg>`;
-      pin.appendChild(vb);
-      if(rec.duration){
-        const db=document.createElement("div");
-        db.className="dur-badge";
-        db.textContent=fmtDuration(rec.duration);
-        pin.appendChild(db);
-      }
-    }
-
-    let pressTimer=null;
-    const startPress=()=>{ pressTimer=setTimeout(()=>{ enterSelection(rec.id); pressTimer=null; }, 480); };
-    const cancelPress=()=>{ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } };
-    pin.addEventListener("pointerdown", startPress);
-    pin.addEventListener("pointerup", cancelPress);
-    pin.addEventListener("pointerleave", cancelPress);
-    pin.addEventListener("pointercancel", cancelPress);
-    pin.addEventListener("click", ()=>{
-      if(selectionMode) toggleSelect(rec.id);
-      else openDetail(rec.id);
-    });
-
-    getLazyThumbObserver().observe(pin);
-    return pin;
-  }
-
-  function removeSentinel(){
-    const sentinel=document.getElementById("gridSentinel");
-    if(sentinel){
-      if(sentinelObserver) sentinelObserver.unobserve(sentinel);
-      sentinel.remove();
-    }
-  }
-  function ensureSentinel(){
-    let sentinel=document.getElementById("gridSentinel");
-    if(!sentinel){
-      sentinel=document.createElement("div");
-      sentinel.id="gridSentinel";
-    }
-    grid.appendChild(sentinel);
-    if(!sentinelObserver){
-      sentinelObserver=new IntersectionObserver((entries)=>{
-        entries.forEach(en=>{ if(en.isIntersecting) appendNextChunk(); });
-      }, {root:document.querySelector("main"), rootMargin:"900px 0px"});
-    }
-    sentinelObserver.unobserve(sentinel);
-    sentinelObserver.observe(sentinel);
-  }
-  function appendNextChunk(){
-    removeSentinel();
-    const next=currentVisibleList.slice(renderedCount, renderedCount+PAGE_SIZE);
-    const frag=document.createDocumentFragment();
-    next.forEach(rec=> frag.appendChild(buildPinEl(rec)));
-    grid.appendChild(frag);
-    renderedCount+=next.length;
-    if(renderedCount<currentVisibleList.length) ensureSentinel();
-  }
-
+  // ---------- Rendering: feed ----------
   function renderGrid(){
-    if(currentView==="profile"){
-      grid.style.display="none";
-      emptyState.style.display="none";
-      renderProfile();
-      return;
-    }
-    grid.style.display="block";
-
     const list=visibleList();
-    currentVisibleList=list;
-    renderedCount=0;
     grid.innerHTML="";
-    removeSentinel();
-
-    const showEmpty=baseList().length===0;
+    const showEmpty = baseList().length===0;
     emptyState.style.display = showEmpty ? "block" : "none";
-    if(showEmpty) return;
+    grid.style.display = (currentView==="profile") ? "none" : "block";
+    emptyState.style.display = (currentView!=="profile" && showEmpty) ? "block" : "none";
 
-    if(list.length===0){
-      grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;color:var(--ink-dim);padding:60px 20px;">ما فيه نتائج</div>`;
+    if(currentView==="profile"){ renderProfile(); return; }
+
+    if(list.length===0 && !showEmpty){
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--ink-dim);padding:60px 20px;">ما فيه نتائج</div>`;
       return;
     }
-    appendNextChunk();
-  }
 
-  function renderProfile(){
-    const list=baseList();
-    document.getElementById("pCount").textContent=list.length;
-    document.getElementById("pVideos").textContent=list.filter(i=>i.kind==="video").length;
-    document.getElementById("pFav").textContent=list.filter(i=>i.fav).length;
-    const now=new Date();
-    const thisMonth=list.filter(i=>{
-      const d=new Date(i.date);
-      return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
-    }).length;
-    document.getElementById("pMonth").textContent=thisMonth;
-    document.getElementById("pAlbums").textContent=albums.length;
+    list.forEach(rec=>{
+      const pin=document.createElement("div");
+      pin.className="pin"+(rec.fav?" is-fav":"")+(selectedIds.has(rec.id)?" selected":"")+(rec.albumId?" has-album":"");
+      pin.dataset.id=rec.id;
 
-    if(navigator.storage && navigator.storage.estimate){
-      navigator.storage.estimate().then(est=>{
-        document.getElementById("pSize").textContent=fmtSize(est.usage||0);
-      }).catch(()=>{
-        document.getElementById("pSize").textContent=fmtSize(list.reduce((s,i)=>s+(i.size||0),0));
+      const img=document.createElement("img");
+      img.src=rec.url; img.loading="lazy"; img.alt=rec.name;
+
+      const topRow=document.createElement("div");
+      topRow.className="top-row";
+      const dotsBtn=document.createElement("button");
+      dotsBtn.className="dots-btn";
+      dotsBtn.innerHTML=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.8" fill="#fff"/><circle cx="12" cy="12" r="1.8" fill="#fff"/><circle cx="19" cy="12" r="1.8" fill="#fff"/></svg>`;
+      dotsBtn.addEventListener("click",e=>{ e.stopPropagation(); openMenu(rec.id); });
+      const saveBtn=document.createElement("button");
+      saveBtn.className="save-pill"+(rec.fav?" saved":"");
+      saveBtn.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2 0 3.5 1 6 3.5C14.5 5 16 4 18 4c4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" fill="currentColor"/></svg>${rec.fav?"محفوظة":"حفظ"}`;
+      saveBtn.addEventListener("click",e=>{ e.stopPropagation(); toggleFav(rec.id); });
+      topRow.append(dotsBtn, saveBtn);
+
+      const favDot=document.createElement("div");
+      favDot.className="fav-dot";
+      favDot.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2 0 3.5 1 6 3.5C14.5 5 16 4 18 4c4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z" fill="#e60023"/></svg>`;
+
+      const selBadge=document.createElement("div");
+      selBadge.className="select-badge";
+      selBadge.innerHTML = selectedIds.has(rec.id) ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>` : "";
+
+      const albumDot=document.createElement("div");
+      albumDot.className="album-dot";
+      if(rec.albumId){
+        const alb=albums.find(a=>a.id===rec.albumId);
+        const albName=alb?alb.name:"";
+        albumDot.title=albName;
+        albumDot.innerHTML=`<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke="#fff" stroke-width="2"/></svg><span>${albName}</span>`;
+      }
+
+      pin.append(img, topRow, favDot, selBadge, albumDot);
+
+      let pressTimer=null;
+      const startPress=()=>{ pressTimer=setTimeout(()=>{ enterSelection(rec.id); pressTimer=null; }, 480); };
+      const cancelPress=()=>{ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } };
+      pin.addEventListener("pointerdown", startPress);
+      pin.addEventListener("pointerup", cancelPress);
+      pin.addEventListener("pointerleave", cancelPress);
+      pin.addEventListener("pointercancel", cancelPress);
+
+      pin.addEventListener("click", ()=>{
+        if(selectionMode){ toggleSelect(rec.id); }
+        else{ openDetail(rec.id); }
       });
-    }else{
-      document.getElementById("pSize").textContent=fmtSize(list.reduce((s,i)=>s+(i.size||0),0));
-    }
-  }
-
-  // ============================================================
-  // Favorite / delete / download / share / zip
-  // ============================================================
-  async function toggleFav(id){
-    const rec=images.find(i=>i.id===id);
-    if(!rec) return;
-    rec.fav=!rec.fav;
-    await dbPut(stripForSave(rec));
-    renderGrid();
-    syncDetailIfOpen(id);
-  }
-
-  function removeImageSoft(id){
-    const rec=images.find(i=>i.id===id);
-    if(!rec) return;
-    renderGrid();
-    if(detailId===id) closeDetail();
-    const t=setTimeout(async ()=>{
-      pendingDeletes.delete(id);
-      await dbDel(id);
-      if(rec.thumbUrl) URL.revokeObjectURL(rec.thumbUrl);
-      if(rec.fullUrl) URL.revokeObjectURL(rec.fullUrl);
-      images=images.filter(i=>i.id!==id);
-      renderGrid();
-    }, 4000);
-    pendingDeletes.set(id, t);
-    toast("تم حذف الملف", { undo: ()=>undoDelete(id), duration:4000 });
-  }
-  function undoDelete(id){
-    const t=pendingDeletes.get(id);
-    if(t){ clearTimeout(t); pendingDeletes.delete(id); renderGrid(); toast("تم التراجع"); }
-  }
-  function confirmDelete(id){ removeImageSoft(id); }
-
-  async function downloadImage(rec){
-    const blob=await ensureFullBlob(rec);
-    if(!blob){ toast("تعذّر تحميل الملف"); return; }
-    const url=rec.fullUrl || URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.href=url; a.download=rec.name||"file";
-    document.body.appendChild(a); a.click(); a.remove();
-  }
-  async function shareImage(rec){
-    try{
-      const blob=await ensureFullBlob(rec);
-      if(navigator.share && blob){
-        const file=new File([blob], rec.name, {type: blob.type});
-        if(navigator.canShare && navigator.canShare({files:[file]})){
-          await navigator.share({files:[file], title:rec.name});
-          return;
-        }
-      }
-    }catch(e){ /* fall through */ }
-    await downloadImage(rec);
-    toast("تم التحميل (المشاركة المباشرة غير مدعومة بهالمتصفح)");
-  }
-  async function downloadZip(list, filename){
-    if(!list.length) return;
-    if(typeof JSZip==="undefined"){ toast("تعذّر تجهيز أداة الضغط"); return; }
-    toast(`جاري تجهيز ${list.length} ملف بصيغة ZIP، هذا قد ياخذ وقت للمكتبات الكبيرة…`, {duration:3500});
-    const zip=new JSZip();
-    const used=new Set();
-    for(const rec of list){
-      const blob=await ensureFullBlob(rec);
-      if(!blob) continue;
-      let name=rec.name || "file";
-      if(used.has(name)){
-        const parts=name.split(".");
-        const ext=parts.length>1?parts.pop():"";
-        name=parts.join(".")+"_"+rec.id.slice(-4)+(ext?"."+ext:"");
-      }
-      used.add(name);
-      zip.file(name, blob);
-    }
-    const content=await zip.generateAsync({type:"blob"});
-    const url=URL.createObjectURL(content);
-    const a=document.createElement("a");
-    a.href=url; a.download=filename||"lamha-export.zip";
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 4000);
-    toast("تم تحميل الملف المضغوط");
-  }
-
-  // ============================================================
-  // UPLOAD — files are stored directly as-is (no FileReader/
-  // ArrayBuffer detour, which used to double memory use and was
-  // especially painful for videos). A small worker pool processes
-  // a few files at a time instead of firing everything in
-  // parallel, and the grid is only re-rendered periodically during
-  // a big batch instead of on every single file.
-  // ============================================================
-  async function processOneFile(file){
-    const kind = file.type.startsWith("video/") ? "video" : "image";
-    const dims = await getMediaDims(file, kind).catch(()=>({w:0,h:0,duration:0}));
-    const thumbBlob = await generateThumb(file, kind).catch(()=>null);
-    const meta={
-      id:uid(), name:file.name||("file_"+uid()), type:file.type||"application/octet-stream",
-      kind, date:Date.now(), fav:false, size:file.size,
-      width:dims.w||null, height:dims.h||null, duration:dims.duration||null
-    };
-    await dbAddFull(meta, file, thumbBlob);
-    const withUrl={...meta};
-    if(thumbBlob) withUrl.thumbUrl=URL.createObjectURL(thumbBlob);
-    images.unshift(withUrl);
-    if(kind==="image"){ ensureSig(withUrl).then(()=>{ if(detailId) renderSimilar(detailId); }); }
-    return withUrl;
-  }
-
-  function handleFiles(fileList){
-    const files=Array.from(fileList).filter(f=> f.type.startsWith("image/") || f.type.startsWith("video/"));
-    if(!files.length) return;
-    const total=files.length;
-    let done=0, failed=0;
-    progressWrap.classList.add("show"); progressFill.style.width="1%";
-    toast(total>1 ? `جاري رفع ${total} ملف — يترفعون وحدة وحدة بالخلفية…` : "جاري رفع الملف…");
-
-    const CONCURRENCY=4;
-    let idx=0;
-    function next(){
-      if(idx>=files.length) return Promise.resolve();
-      const file=files[idx++];
-      return processOneFile(file)
-        .catch(err=>{ console.error(err); failed++; })
-        .then(()=>{
-          done++;
-          progressFill.style.width=Math.round((done/total)*100)+"%";
-          if(done % 6===0 || done===total) renderGrid();
-        })
-        .then(next);
-    }
-    const runners=[];
-    for(let k=0;k<CONCURRENCY;k++) runners.push(next());
-    Promise.all(runners).then(()=>{
-      renderGrid();
-      setTimeout(()=>{ progressWrap.classList.remove("show"); progressFill.style.width="0%"; }, 400);
-      toast(failed ? `تم رفع ${done-failed} من ${total} — تعذّر رفع ${failed}` : `تم رفع ${done} ملف`);
+      grid.appendChild(pin);
     });
   }
-
-  // ============================================================
-  // IMPORT FROM URL — tries a direct fetch first (works when the
-  // target allows cross-origin access), then automatically retries
-  // through a couple of public CORS relay services before giving
-  // up. This covers most real-world cases; a handful of sites with
-  // stricter protection can still block every route — that part is
-  // a browser security limit (CORS), not something any client-side
-  // code can force past.
-  // ============================================================
-  const CORS_PROXIES=[
-    u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u),
-    u=>"https://corsproxy.io/?"+encodeURIComponent(u)
-  ];
-  function fetchT(url, opts, ms){
-    const ctrl=new AbortController();
-    const t=setTimeout(()=>ctrl.abort(), ms||15000);
-    return fetch(url, {...opts, signal:ctrl.signal}).finally(()=>clearTimeout(t));
-  }
-  async function fetchMediaAsBlob(url){
-    try{
-      const resp=await fetchT(url, {mode:"cors", credentials:"omit"});
-      if(resp.ok){
-        const ct=resp.headers.get("content-type")||"";
-        if(ct.startsWith("image/")||ct.startsWith("video/")) return await resp.blob();
-      }
-    }catch(e){ /* try proxies */ }
-    for(const build of CORS_PROXIES){
-      try{
-        const resp=await fetchT(build(url), {mode:"cors", credentials:"omit"});
-        if(resp.ok){
-          const blob=await resp.blob();
-          if(blob && blob.size>200) return blob;
-        }
-      }catch(e){ /* try next proxy */ }
-    }
-    throw new Error("BLOCKED");
-  }
-  async function fetchHtml(url){
-    try{
-      const resp=await fetchT(url, {mode:"cors", credentials:"omit"});
-      if(resp.ok) return await resp.text();
-    }catch(e){ /* try proxies */ }
-    for(const build of CORS_PROXIES){
-      try{
-        const resp=await fetchT(build(url), {mode:"cors", credentials:"omit"});
-        if(resp.ok) return await resp.text();
-      }catch(e){ /* try next proxy */ }
-    }
-    throw new Error("BLOCKED");
-  }
-  function nameFromUrl(url){
-    try{
-      const clean=url.split("?")[0].split("#")[0];
-      const last=decodeURIComponent(clean.split("/").filter(Boolean).pop()||"");
-      return last || ("file_"+uid());
-    }catch(e){ return "file_"+uid(); }
-  }
-  function extractImageUrlsFromHtml(html, baseUrl){
-    try{
-      const doc=new DOMParser().parseFromString(html, "text/html");
-      const found=Array.from(doc.querySelectorAll("img[src], img[data-src], source[srcset]")).map(el=>{
-        let src=el.getAttribute("src")||el.getAttribute("data-src");
-        if(!src && el.getAttribute("srcset")) src=el.getAttribute("srcset").split(",")[0].trim().split(" ")[0];
-        try{ return new URL(src, baseUrl).href; }catch(e){ return null; }
-      }).filter(Boolean);
-      return Array.from(new Set(found)).slice(0,80);
-    }catch(e){ return []; }
-  }
-  async function addImageFromBlob(blob, name){
-    const kind = (blob.type||"").startsWith("video/") ? "video" : "image";
-    const dims = await getMediaDims(blob, kind).catch(()=>({w:0,h:0,duration:0}));
-    const thumbBlob = await generateThumb(blob, kind).catch(()=>null);
-    const meta={
-      id:uid(), name: name||("file_"+uid()), type: blob.type||"application/octet-stream",
-      kind, date:Date.now(), fav:false, size:blob.size,
-      width:dims.w||null, height:dims.h||null, duration:dims.duration||null
-    };
-    await dbAddFull(meta, blob, thumbBlob);
-    const withUrl={...meta};
-    if(thumbBlob) withUrl.thumbUrl=URL.createObjectURL(thumbBlob);
-    images.unshift(withUrl);
-    renderGrid();
-    if(kind==="image") ensureSig(withUrl).then(()=>{ if(detailId) renderSimilar(detailId); });
-    return withUrl;
-  }
-  async function importOneUrl(url){
-    try{
-      const blob=await fetchMediaAsBlob(url);
-      if(blob.size<3000) throw new Error("TOO_SMALL");
-      await addImageFromBlob(blob, nameFromUrl(url));
-      return {ok:true, count:1};
-    }catch(e1){ /* not a direct media URL — try scraping the page */ }
-    try{
-      const html=await fetchHtml(url);
-      const imgUrls=extractImageUrlsFromHtml(html, url);
-      if(!imgUrls.length) return {ok:false, error:"no_images"};
-      let success=0;
-      for(const iu of imgUrls){
-        try{
-          const blob=await fetchMediaAsBlob(iu);
-          if(blob.size<3000) continue;
-          await addImageFromBlob(blob, nameFromUrl(iu));
-          success++;
-        }catch(e){ /* skip this one, keep going */ }
-      }
-      return success>0 ? {ok:true, count:success} : {ok:false, error:"blocked"};
-    }catch(e2){
-      return {ok:false, error:"blocked"};
-    }
-  }
-  async function runImport(){
-    const raw=document.getElementById("importUrlsInput").value;
-    const lines=Array.from(new Set(raw.split("\n").map(s=>s.trim()).filter(Boolean)));
-    if(!lines.length){ toast("حط رابط وحد على الأقل"); return; }
-    const btn=document.getElementById("importGoBtn");
-    const logWrap=document.getElementById("importLog");
-    btn.disabled=true; btn.textContent="جاري السحب…";
-    logWrap.style.display="flex"; logWrap.innerHTML="";
-    let successTotal=0, failTotal=0;
-    for(const url of lines){
-      const line=document.createElement("div");
-      line.textContent="⏳ "+url;
-      logWrap.appendChild(line);
-      logWrap.scrollTop=logWrap.scrollHeight;
-      try{
-        const res=await importOneUrl(url);
-        if(res.ok){
-          successTotal+=(res.count||1);
-          line.textContent="✓ "+url+(res.count>1?` — ${res.count} صور`:"");
-        }else{
-          failTotal++;
-          line.textContent="✗ "+url+(res.error==="no_images" ? " — ما لقيت صور بالصفحة" : " — تعذّر الوصول حتى عبر الوسيط");
-        }
-      }catch(e){
-        failTotal++;
-        line.textContent="✗ "+url+" — فشل غير متوقع";
-      }
-      logWrap.scrollTop=logWrap.scrollHeight;
-    }
-    btn.disabled=false; btn.textContent="سحب الصور";
-    toast(failTotal ? `تم استيراد ${successTotal} — وتعذّر سحب ${failTotal}` : `تم استيراد ${successTotal} صورة`);
-  }
-
-  // ============================================================
-  // DETAIL (PIN) VIEW
-  // ============================================================
-  const detail=document.getElementById("detail");
-  const detailImg=document.getElementById("detailImg");
-  const detailVideo=document.getElementById("detailVideo");
-  const detailLoading=document.getElementById("detailLoading");
-  const detailName=document.getElementById("detailName");
-  const detailDate=document.getElementById("detailDate");
-  const detailAvatar=document.getElementById("detailAvatar");
-  const detailSave=document.getElementById("detailSave");
-  const detailSaveLabel=document.getElementById("detailSaveLabel");
-
-  async function openDetail(id){
-    const rec=images.find(i=>i.id===id);
-    if(!rec) return;
-    detailId=id;
-    detailImg.style.display="none"; detailImg.src="";
-    detailVideo.style.display="none"; detailVideo.pause(); detailVideo.src="";
-    detailImg.classList.remove("zoomed");
-    detailLoading.style.display="flex";
-
-    detailName.textContent=rec.name;
-    detailDate.textContent=fmtDate(rec.date)+(rec.viewCount?" · شوهدت "+rec.viewCount+" مرة":"");
-    detailAvatar.textContent=(rec.name||"ص").trim().charAt(0).toUpperCase();
-    syncDetailIfOpen(id);
-    detail.classList.add("open");
-    document.body.style.overflow="hidden";
-    detail.scrollTop=0;
-
-    rec.viewCount=(rec.viewCount||0)+1;
-    rec.lastViewed=Date.now();
-    dbPut(stripForSave(rec)).catch(()=>{});
-
-    if(rec.kind==="video"){
-      document.getElementById("similarSection").style.display="none";
-    }else if(rec.sig){
-      renderSimilar(id);
-    }else{
-      document.getElementById("similarGrid").innerHTML=`<div class="similar-empty">جاري تحليل الصور…</div>`;
-      document.getElementById("similarSection").style.display="block";
-      ensureSig(rec).then(()=>{ if(detailId===id) renderSimilar(id); });
-    }
-
-    const url=await ensureFullUrl(rec);
-    if(detailId!==id) return; // user navigated away while loading
-    detailLoading.style.display="none";
-    if(!url){ toast("تعذّر تحميل الملف"); return; }
-    if(rec.kind==="video"){
-      detailVideo.src=url;
-      detailVideo.style.display="block";
-    }else{
-      detailImg.src=url;
-      detailImg.style.display="block";
-    }
-  }
-  function syncDetailIfOpen(id){
-    if(detailId!==id) return;
-    const rec=images.find(i=>i.id===id);
-    if(!rec) return;
-    detailSave.classList.toggle("saved", !!rec.fav);
-    detailSaveLabel.textContent = rec.fav ? "محفوظة" : "حفظ";
-    detailName.textContent=rec.name;
-  }
-  function closeDetail(){
-    detail.classList.remove("open");
-    document.body.style.overflow="";
-    detailVideo.pause();
-    detailId=null;
-  }
-  document.getElementById("detailBack").addEventListener("click", closeDetail);
-  detailSave.addEventListener("click", ()=>{ if(detailId) toggleFav(detailId); });
-  document.getElementById("detailDownload").addEventListener("click", ()=>{
-    const rec=images.find(i=>i.id===detailId); if(rec) downloadImage(rec);
-  });
-  document.getElementById("detailShare").addEventListener("click", ()=>{
-    const rec=images.find(i=>i.id===detailId); if(rec) shareImage(rec);
-  });
-  document.getElementById("detailMenuBtn").addEventListener("click", ()=>{ if(detailId) openMenu(detailId); });
-  detailImg.addEventListener("dblclick", ()=> detailImg.classList.toggle("zoomed"));
-  detailImg.addEventListener("click", ()=>{ if(detailImg.classList.contains("zoomed")) detailImg.classList.remove("zoomed"); });
-  document.getElementById("detailRenameBtn").addEventListener("click", ()=>{ if(detailId) openRename(detailId); });
-
-  // ============================================================
-  // "..." MENU SHEET (grid pin + detail view) + rename + albums + import
-  // ============================================================
-  const menuSheet=document.getElementById("menuSheet");
-  const menuCardDefault=document.getElementById("menuCardDefault");
-  const menuCardRename=document.getElementById("menuCardRename");
-  const menuCardAlbums=document.getElementById("menuCardAlbums");
-  const menuCardNewAlbum=document.getElementById("menuCardNewAlbum");
-  const menuCardImport=document.getElementById("menuCardImport");
-  const menuFavLabel=document.getElementById("menuFavLabel");
-  const renameInput=document.getElementById("renameInput");
-
-  function hideAllMenuCards(){
-    menuCardDefault.style.display="none";
-    menuCardRename.style.display="none";
-    menuCardAlbums.style.display="none";
-    menuCardNewAlbum.style.display="none";
-    menuCardImport.style.display="none";
-  }
-  function openMenu(id){
-    menuTargetId=id;
-    const rec=images.find(i=>i.id===id);
-    menuFavLabel.textContent = rec && rec.fav ? "إزالة من المفضّلة" : "إضافة للمفضّلة";
-    hideAllMenuCards();
-    menuCardDefault.style.display="block";
-    menuSheet.classList.add("open");
-  }
-  function closeMenu(){ menuSheet.classList.remove("open"); menuTargetId=null; }
-  function openRename(id){
-    menuTargetId=id;
-    const rec=images.find(i=>i.id===id);
-    renameInput.value = rec ? rec.name : "";
-    hideAllMenuCards();
-    menuCardRename.style.display="block";
-    menuSheet.classList.add("open");
-    setTimeout(()=>renameInput.focus(), 150);
-  }
-  menuSheet.addEventListener("click", e=>{ if(e.target===menuSheet) closeMenu(); });
-  document.getElementById("menuDownload").addEventListener("click", ()=>{
-    const rec=images.find(i=>i.id===menuTargetId); if(rec) downloadImage(rec); closeMenu();
-  });
-  document.getElementById("menuRename").addEventListener("click", ()=> openRename(menuTargetId));
-  document.getElementById("menuMove").addEventListener("click", ()=>{
-    if(menuTargetId) openAlbumPicker([menuTargetId]);
-  });
-  document.getElementById("menuFav").addEventListener("click", ()=>{
-    if(menuTargetId) toggleFav(menuTargetId); closeMenu();
-  });
-  document.getElementById("menuDelete").addEventListener("click", ()=>{
-    const id=menuTargetId; closeMenu(); if(id) confirmDelete(id);
-  });
-  document.getElementById("renameCancel").addEventListener("click", closeMenu);
-  document.getElementById("renameConfirm").addEventListener("click", async ()=>{
-    const id=menuTargetId;
-    const newName=renameInput.value.trim();
-    const rec=images.find(i=>i.id===id);
-    if(rec && newName){
-      rec.name=newName;
-      await dbPut(stripForSave(rec));
-      renderGrid();
-      syncDetailIfOpen(id);
-    }
-    closeMenu();
-  });
 
   // ---------- Albums ----------
   function renderAlbumChips(){
@@ -1764,7 +984,9 @@
       wrap.appendChild(chip);
     });
   }
+
   function albumUid(){ return "alb_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,6); }
+
   async function createAlbum(name){
     const rec={ id:albumUid(), name, date:Date.now() };
     await dbAddAlbum(rec);
@@ -1772,7 +994,7 @@
     renderAlbumChips();
     return rec;
   }
-  let pendingMoveIds=null;
+
   function openAlbumPicker(targetIds){
     const list=document.getElementById("albumPickList");
     list.innerHTML="";
@@ -1799,26 +1021,372 @@
     newRow.addEventListener("click", ()=>{ pendingMoveIds=targetIds; openNewAlbumSheet(); });
     list.appendChild(newRow);
 
-    hideAllMenuCards();
+    menuCardDefault.style.display="none";
+    menuCardRename.style.display="none";
     menuCardAlbums.style.display="block";
+    menuCardNewAlbum.style.display="none";
+    menuCardImport.style.display="none";
     menuSheet.classList.add("open");
   }
+
   async function assignAlbum(ids, albumId){
     for(const id of ids){
       const rec=images.find(i=>i.id===id);
-      if(rec){ rec.albumId=albumId; await dbPut(stripForSave(rec)); }
+      if(rec){ rec.albumId=albumId; await dbPut(stripUrl(rec)); }
     }
     renderGrid();
     if(detailId && ids.includes(detailId)) syncDetailIfOpen(detailId);
     toast(albumId ? "تم النقل للمجموعة" : "تمت الإزالة من المجموعة");
   }
+
+  let pendingMoveIds=null;
   function openNewAlbumSheet(){
     document.getElementById("newAlbumInput").value="";
-    hideAllMenuCards();
+    menuCardDefault.style.display="none";
+    menuCardRename.style.display="none";
+    menuCardAlbums.style.display="none";
     menuCardNewAlbum.style.display="block";
+    menuCardImport.style.display="none";
     menuSheet.classList.add("open");
     setTimeout(()=>document.getElementById("newAlbumInput").focus(),150);
   }
+
+  function addSkeleton(){
+    const s=document.createElement("div");
+    s.className="skeleton";
+    s.style.height=(150+Math.random()*180)+"px";
+    grid.prepend(s);
+    return s;
+  }
+
+  // ---------- Profile view ----------
+  function renderProfile(){
+    const list=baseList();
+    document.getElementById("pCount").textContent=list.length;
+    document.getElementById("pFav").textContent=list.filter(i=>i.fav).length;
+    const totalBytes=list.reduce((sum,i)=>sum+(i.blob?i.blob.size:0),0);
+    document.getElementById("pSize").textContent=fmtSize(totalBytes);
+    const now=new Date();
+    const thisMonth=list.filter(i=>{
+      const d=new Date(i.date);
+      return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
+    }).length;
+    document.getElementById("pMonth").textContent=thisMonth;
+    document.getElementById("pAlbums").textContent=albums.length;
+  }
+
+  // ---------- Favorite / delete / download ----------
+  async function toggleFav(id){
+    const rec=images.find(i=>i.id===id);
+    if(!rec) return;
+    rec.fav=!rec.fav;
+    await dbPut(stripUrl(rec));
+    renderGrid();
+    syncDetailIfOpen(id);
+  }
+  function stripUrl(rec){ const {url, ...rest}=rec; return rest; }
+
+  function removeImageSoft(id){
+    const rec=images.find(i=>i.id===id);
+    if(!rec) return;
+    renderGrid();
+    if(detailId===id) closeDetail();
+    const t=setTimeout(async ()=>{
+      pendingDeletes.delete(id);
+      await dbDel(id);
+      URL.revokeObjectURL(rec.url);
+      images=images.filter(i=>i.id!==id);
+      renderGrid();
+    }, 4000);
+    pendingDeletes.set(id, t);
+    toast("تم حذف الصورة", { undo: ()=>undoDelete(id), duration:4000 });
+  }
+  function undoDelete(id){
+    const t=pendingDeletes.get(id);
+    if(t){ clearTimeout(t); pendingDeletes.delete(id); renderGrid(); toast("تم التراجع"); }
+  }
+  function confirmDelete(id){
+    const rec=images.find(i=>i.id===id);
+    if(!rec) return;
+    removeImageSoft(id);
+  }
+
+  function downloadImage(rec){
+    const a=document.createElement("a");
+    a.href=rec.url; a.download=rec.name||"image.jpg";
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  async function shareImage(rec){
+    try{
+      if(navigator.share){
+        const resp=await fetch(rec.url); const blob=await resp.blob();
+        const file=new File([blob], rec.name, {type: blob.type});
+        if(navigator.canShare && navigator.canShare({files:[file]})){
+          await navigator.share({files:[file], title:rec.name});
+          return;
+        }
+      }
+    }catch(e){ /* fall through */ }
+    downloadImage(rec);
+    toast("تم التحميل (المشاركة المباشرة غير مدعومة بهالمتصفح)");
+  }
+
+  async function downloadZip(list, filename){
+    if(!list.length) return;
+    if(typeof JSZip==="undefined"){ toast("تعذّر تجهيز أداة الضغط"); return; }
+    toast("جاري تجهيز ملف ZIP…");
+    const zip=new JSZip();
+    const used=new Set();
+    for(const rec of list){
+      let name=rec.name || "image";
+      if(used.has(name)){
+        const parts=name.split(".");
+        const ext=parts.length>1?parts.pop():"";
+        name=parts.join(".")+"_"+rec.id.slice(-4)+(ext?"."+ext:"");
+      }
+      used.add(name);
+      zip.file(name, rec.blob);
+    }
+    const content=await zip.generateAsync({type:"blob"});
+    const url=URL.createObjectURL(content);
+    const a=document.createElement("a");
+    a.href=url; a.download=filename||"lamha-photos.zip";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    toast("تم تحميل الملف المضغوط");
+  }
+
+  // ---------- Upload: each file inserted individually ----------
+  function handleFiles(fileList){
+    const files=Array.from(fileList).filter(f=>f.type.startsWith("image/"));
+    if(!files.length) return;
+    let done=0; const total=files.length;
+    progressWrap.classList.add("show"); progressFill.style.width="2%";
+    const bump=()=>{
+      done++;
+      progressFill.style.width=Math.round((done/total)*100)+"%";
+      if(done>=total){ setTimeout(()=>{ progressWrap.classList.remove("show"); progressFill.style.width="0%"; }, 400); }
+    };
+    files.forEach(file=>{
+      const skeleton=addSkeleton();
+      const reader=new FileReader();
+      reader.onload=async ()=>{
+        const blob=new Blob([reader.result],{type:file.type});
+        const record={ id:uid(), name:file.name, type:file.type, date:Date.now(), fav:false, blob:blob };
+        try{
+          await dbAdd(record);
+          const withUrl={...record, url:URL.createObjectURL(blob)};
+          images.unshift(withUrl);
+          ensureSig(withUrl).then(()=>{ if(detailId) renderSimilar(detailId); });
+        }catch(err){ console.error(err); toast("فشل حفظ: "+file.name); }
+        finally{ skeleton.remove(); renderGrid(); bump(); }
+      };
+      reader.onerror=()=>{ skeleton.remove(); toast("تعذّرت قراءة: "+file.name); bump(); };
+      reader.readAsArrayBuffer(file);
+    });
+    toast(total>1 ? `جاري رفع ${total} صور، كل وحدة لحالها…` : "جاري رفع الصورة…");
+  }
+
+  // ---------- Import from URL (best-effort — subject to browser CORS restrictions) ----------
+  async function addImageFromBlob(blob, name){
+    const record={ id:uid(), name: name||("image_"+uid()+".jpg"), type: blob.type||"image/jpeg", date:Date.now(), fav:false, blob:blob };
+    await dbAdd(record);
+    const withUrl={...record, url:URL.createObjectURL(blob)};
+    images.unshift(withUrl);
+    renderGrid();
+    ensureSig(withUrl).then(()=>{ if(detailId) renderSimilar(detailId); });
+    return withUrl;
+  }
+  async function fetchImageAsBlob(url){
+    const resp=await fetch(url, {mode:"cors", credentials:"omit"});
+    if(!resp.ok) throw new Error("HTTP "+resp.status);
+    const ct=resp.headers.get("content-type")||"";
+    if(!ct.startsWith("image/")) throw new Error("NOT_IMAGE");
+    return await resp.blob();
+  }
+  function nameFromUrl(url){
+    try{
+      const clean=url.split("?")[0].split("#")[0];
+      const last=decodeURIComponent(clean.split("/").filter(Boolean).pop()||"");
+      return last || ("image_"+uid()+".jpg");
+    }catch(e){ return "image_"+uid()+".jpg"; }
+  }
+  function extractImageUrlsFromHtml(html, baseUrl){
+    try{
+      const doc=new DOMParser().parseFromString(html, "text/html");
+      const found=Array.from(doc.querySelectorAll("img[src], img[data-src]")).map(el=>{
+        const src=el.getAttribute("src")||el.getAttribute("data-src");
+        try{ return new URL(src, baseUrl).href; }catch(e){ return null; }
+      }).filter(Boolean);
+      return Array.from(new Set(found)).slice(0,40);
+    }catch(e){ return []; }
+  }
+  async function importOneUrl(url){
+    // Attempt 1: treat as a direct image URL
+    try{
+      const blob=await fetchImageAsBlob(url);
+      await addImageFromBlob(blob, nameFromUrl(url));
+      return {ok:true, count:1};
+    }catch(e1){ /* fall through to page-scrape attempt */ }
+    // Attempt 2: treat as a webpage, try to pull its <img> tags (works only if the site allows cross-origin access)
+    try{
+      const resp=await fetch(url, {mode:"cors", credentials:"omit"});
+      if(!resp.ok) throw new Error("HTTP "+resp.status);
+      const html=await resp.text();
+      const imgUrls=extractImageUrlsFromHtml(html, url);
+      if(!imgUrls.length) return {ok:false, error:"no_images"};
+      let success=0;
+      for(const iu of imgUrls){
+        try{ const blob=await fetchImageAsBlob(iu); await addImageFromBlob(blob, nameFromUrl(iu)); success++; }
+        catch(e){ /* skip this one, keep going */ }
+      }
+      return success>0 ? {ok:true, count:success} : {ok:false, error:"blocked"};
+    }catch(e2){
+      return {ok:false, error:"blocked"};
+    }
+  }
+  async function runImport(){
+    const raw=document.getElementById("importUrlsInput").value;
+    const lines=Array.from(new Set(raw.split("\n").map(s=>s.trim()).filter(Boolean)));
+    if(!lines.length){ toast("حط رابط وحد على الأقل"); return; }
+    const btn=document.getElementById("importGoBtn");
+    const logWrap=document.getElementById("importLog");
+    btn.disabled=true; btn.textContent="جاري السحب…";
+    logWrap.style.display="flex"; logWrap.innerHTML="";
+    let successTotal=0, failTotal=0;
+    for(const url of lines){
+      const line=document.createElement("div");
+      line.textContent="⏳ "+url;
+      logWrap.appendChild(line);
+      logWrap.scrollTop=logWrap.scrollHeight;
+      try{
+        const res=await importOneUrl(url);
+        if(res.ok){
+          successTotal += (res.count||1);
+          line.textContent = "✓ "+url+(res.count>1 ? ` — ${res.count} صور` : "");
+        }else{
+          failTotal++;
+          line.textContent = "✗ "+url+(res.error==="no_images" ? " — ما لقيت صور بالصفحة" : " — الموقع يمنع الوصول من متصفح خارجي (CORS)");
+        }
+      }catch(e){
+        failTotal++;
+        line.textContent="✗ "+url+" — فشل غير متوقع";
+      }
+      logWrap.scrollTop=logWrap.scrollHeight;
+    }
+    btn.disabled=false; btn.textContent="سحب الصور";
+    toast(failTotal ? `تم استيراد ${successTotal} صورة — وتعذّر سحب ${failTotal}` : `تم استيراد ${successTotal} صورة`);
+  }
+
+  // ---------- Detail view ----------
+  const detail=document.getElementById("detail");
+  const detailImg=document.getElementById("detailImg");
+  const detailImgWrap=document.getElementById("detailImgWrap");
+  const detailName=document.getElementById("detailName");
+  const detailDate=document.getElementById("detailDate");
+  const detailAvatar=document.getElementById("detailAvatar");
+  const detailSave=document.getElementById("detailSave");
+  const detailSaveLabel=document.getElementById("detailSaveLabel");
+
+  function openDetail(id){
+    const rec=images.find(i=>i.id===id);
+    if(!rec) return;
+    detailId=id;
+    detailImg.src=rec.url;
+    detailImg.classList.remove("zoomed");
+    detailName.textContent=rec.name;
+    detailDate.textContent=fmtDate(rec.date)+(rec.viewCount?" · شوهدت "+rec.viewCount+" مرة":"");
+    detailAvatar.textContent=(rec.name||"ص").trim().charAt(0).toUpperCase();
+    syncDetailIfOpen(id);
+    detail.classList.add("open");
+    document.body.style.overflow="hidden";
+    detail.scrollTop=0;
+
+    rec.viewCount=(rec.viewCount||0)+1;
+    rec.lastViewed=Date.now();
+    dbPut(stripUrl(rec)).catch(()=>{});
+
+    if(rec.sig){ renderSimilar(id); }
+    else{
+      document.getElementById("similarGrid").innerHTML=`<div class="similar-empty">جاري تحليل الصور…</div>`;
+      document.getElementById("similarSection").style.display="block";
+      ensureSig(rec).then(()=>{ if(detailId===id) renderSimilar(id); });
+    }
+  }
+  function syncDetailIfOpen(id){
+    if(detailId!==id) return;
+    const rec=images.find(i=>i.id===id);
+    if(!rec) return;
+    detailSave.classList.toggle("saved", !!rec.fav);
+    detailSaveLabel.textContent = rec.fav ? "محفوظة" : "حفظ";
+    detailName.textContent=rec.name;
+  }
+  function closeDetail(){
+    detail.classList.remove("open");
+    document.body.style.overflow="";
+    detailId=null;
+  }
+  document.getElementById("detailBack").addEventListener("click", closeDetail);
+  detailSave.addEventListener("click", ()=>{ if(detailId) toggleFav(detailId); });
+  document.getElementById("detailDownload").addEventListener("click", ()=>{
+    const rec=images.find(i=>i.id===detailId); if(rec) downloadImage(rec);
+  });
+  document.getElementById("detailShare").addEventListener("click", ()=>{
+    const rec=images.find(i=>i.id===detailId); if(rec) shareImage(rec);
+  });
+  document.getElementById("detailMenuBtn").addEventListener("click", ()=>{
+    if(detailId) openMenu(detailId);
+  });
+  detailImg.addEventListener("dblclick", ()=> detailImg.classList.toggle("zoomed"));
+  detailImg.addEventListener("click", ()=>{ if(detailImg.classList.contains("zoomed")) detailImg.classList.remove("zoomed"); });
+  document.getElementById("detailRenameBtn").addEventListener("click", ()=>{
+    if(detailId) openRename(detailId);
+  });
+
+  // ---------- "..." menu sheet ----------
+  const menuSheet=document.getElementById("menuSheet");
+  const menuCardDefault=document.getElementById("menuCardDefault");
+  const menuCardRename=document.getElementById("menuCardRename");
+  const menuCardAlbums=document.getElementById("menuCardAlbums");
+  const menuCardNewAlbum=document.getElementById("menuCardNewAlbum");
+  const menuCardImport=document.getElementById("menuCardImport");
+  function hideAllMenuCards(){
+    menuCardDefault.style.display="none";
+    menuCardRename.style.display="none";
+    menuCardAlbums.style.display="none";
+    menuCardNewAlbum.style.display="none";
+    menuCardImport.style.display="none";
+  }
+  const menuFavLabel=document.getElementById("menuFavLabel");
+  const renameInput=document.getElementById("renameInput");
+
+  function openMenu(id){
+    menuTargetId=id;
+    const rec=images.find(i=>i.id===id);
+    menuFavLabel.textContent = rec && rec.fav ? "إزالة من المفضّلة" : "إضافة للمفضّلة";
+    hideAllMenuCards();
+    menuCardDefault.style.display="block";
+    menuSheet.classList.add("open");
+  }
+  function closeMenu(){ menuSheet.classList.remove("open"); menuTargetId=null; }
+  function openRename(id){
+    menuTargetId=id;
+    const rec=images.find(i=>i.id===id);
+    renameInput.value = rec ? rec.name : "";
+    hideAllMenuCards();
+    menuCardRename.style.display="block";
+    menuSheet.classList.add("open");
+    setTimeout(()=>renameInput.focus(), 150);
+  }
+  menuSheet.addEventListener("click", e=>{ if(e.target===menuSheet) closeMenu(); });
+  document.getElementById("menuDownload").addEventListener("click", ()=>{
+    const rec=images.find(i=>i.id===menuTargetId); if(rec) downloadImage(rec); closeMenu();
+  });
+  document.getElementById("menuRename").addEventListener("click", ()=> openRename(menuTargetId));
+  document.getElementById("menuMove").addEventListener("click", ()=>{
+    if(menuTargetId) openAlbumPicker([menuTargetId]);
+  });
   document.getElementById("albumPickCancel").addEventListener("click", closeMenu);
   document.getElementById("newAlbumCancel").addEventListener("click", ()=>{ pendingMoveIds=null; closeMenu(); });
   document.getElementById("newAlbumConfirm").addEventListener("click", async ()=>{
@@ -1829,24 +1397,27 @@
     else{ toast("تم إنشاء المجموعة"); }
     closeMenu();
   });
-
-  // ---------- Import sheet open/close ----------
-  document.getElementById("importUrlBtn").addEventListener("click", ()=>{
-    document.getElementById("importUrlsInput").value="";
-    document.getElementById("importLog").style.display="none";
-    document.getElementById("importLog").innerHTML="";
-    document.getElementById("importGoBtn").disabled=false;
-    document.getElementById("importGoBtn").textContent="سحب الصور";
-    hideAllMenuCards();
-    menuCardImport.style.display="block";
-    menuSheet.classList.add("open");
+  document.getElementById("menuFav").addEventListener("click", ()=>{
+    if(menuTargetId) toggleFav(menuTargetId); closeMenu();
   });
-  document.getElementById("importCancel").addEventListener("click", closeMenu);
-  document.getElementById("importGoBtn").addEventListener("click", runImport);
+  document.getElementById("menuDelete").addEventListener("click", ()=>{
+    const id=menuTargetId; closeMenu(); if(id) confirmDelete(id);
+  });
+  document.getElementById("renameCancel").addEventListener("click", closeMenu);
+  document.getElementById("renameConfirm").addEventListener("click", async ()=>{
+    const id=menuTargetId;
+    const newName=renameInput.value.trim();
+    const rec=images.find(i=>i.id===id);
+    if(rec && newName){
+      rec.name=newName;
+      await dbPut(stripUrl(rec));
+      renderGrid();
+      syncDetailIfOpen(id);
+    }
+    closeMenu();
+  });
 
-  // ============================================================
-  // SELECTION MODE
-  // ============================================================
+  // ---------- Selection mode ----------
   function enterSelection(firstId){
     selectionMode=true;
     document.body.classList.add("selecting");
@@ -1870,7 +1441,9 @@
     updateSelCount();
     renderGrid();
   }
-  function updateSelCount(){ document.getElementById("selCount").textContent = selectedIds.size + " محددة"; }
+  function updateSelCount(){
+    document.getElementById("selCount").textContent = selectedIds.size + " محددة";
+  }
   document.getElementById("selectModeBtn").addEventListener("click", ()=>{
     if(selectionMode) exitSelection(); else enterSelection(null);
   });
@@ -1879,7 +1452,7 @@
     const ids=Array.from(selectedIds);
     for(const id of ids){
       const rec=images.find(i=>i.id===id);
-      if(rec){ rec.fav=true; await dbPut(stripForSave(rec)); }
+      if(rec){ rec.fav=true; await dbPut(stripUrl(rec)); }
     }
     toast("انضافت للمفضّلة");
     exitSelection();
@@ -1894,14 +1467,12 @@
   document.getElementById("selDeleteBtn").addEventListener("click", ()=>{
     const ids=Array.from(selectedIds);
     if(!ids.length) return;
-    if(!confirm(`تحذف ${ids.length} ملف؟`)) return;
+    if(!confirm(`تحذف ${ids.length} صورة؟`)) return;
     ids.forEach(id=> removeImageSoft(id));
     exitSelection();
   });
 
-  // ============================================================
-  // Filter chips / sort / density
-  // ============================================================
+  // ---------- Top chips (all / fav / sort / density) ----------
   document.querySelectorAll('.chip[data-filter]').forEach(chip=>{
     chip.addEventListener("click", ()=>{
       document.querySelectorAll('.chip[data-filter]').forEach(c=>c.classList.remove("active"));
@@ -1912,6 +1483,7 @@
       renderGrid();
     });
   });
+
   const sortLabels={newest:"الأحدث", oldest:"الأقدم", name:"الاسم"};
   function setSort(val){
     sortBy=val;
@@ -1921,9 +1493,12 @@
   }
   document.getElementById("sortBtn").addEventListener("click", ()=>{
     const order=["newest","oldest","name"];
-    setSort(order[(order.indexOf(sortBy)+1)%order.length]);
+    const next=order[(order.indexOf(sortBy)+1)%order.length];
+    setSort(next);
   });
-  document.querySelectorAll('#sortSeg button').forEach(b=> b.addEventListener("click", ()=> setSort(b.dataset.s)));
+  document.querySelectorAll('#sortSeg button').forEach(b=>{
+    b.addEventListener("click", ()=> setSort(b.dataset.s));
+  });
 
   function setDensity(isDense){
     dense=isDense;
@@ -1932,12 +1507,32 @@
     document.querySelectorAll('#densitySeg button').forEach(b=>b.classList.toggle("active", (b.dataset.d==="dense")===dense));
   }
   document.getElementById("densityBtn").addEventListener("click", ()=> setDensity(!dense));
-  document.querySelectorAll('#densitySeg button').forEach(b=> b.addEventListener("click", ()=> setDensity(b.dataset.d==="dense")));
+  document.querySelectorAll('#densitySeg button').forEach(b=>{
+    b.addEventListener("click", ()=> setDensity(b.dataset.d==="dense"));
+  });
 
-  document.getElementById("newAlbumChip").addEventListener("click", ()=>{ pendingMoveIds=null; openNewAlbumSheet(); });
+  document.getElementById("newAlbumChip").addEventListener("click", ()=>{
+    pendingMoveIds=null;
+    openNewAlbumSheet();
+  });
+
+  document.getElementById("importUrlBtn").addEventListener("click", ()=>{
+    document.getElementById("importUrlsInput").value="";
+    document.getElementById("importLog").style.display="none";
+    document.getElementById("importLog").innerHTML="";
+    document.getElementById("importGoBtn").disabled=false;
+    document.getElementById("importGoBtn").textContent="سحب الصور";
+    hideAllMenuCards();
+    menuCardImport.style.display="block";
+    menuSheet.classList.add("open");
+  });
+  document.getElementById("importCancel").addEventListener("click", closeMenu);
+  document.getElementById("importGoBtn").addEventListener("click", runImport);
 
   // ---------- Search ----------
-  document.getElementById("searchInput").addEventListener("input", e=>{ searchTerm=e.target.value; renderGrid(); });
+  document.getElementById("searchInput").addEventListener("input", e=>{
+    searchTerm=e.target.value; renderGrid();
+  });
 
   // ---------- Bottom tab bar ----------
   document.querySelectorAll(".tab-btn[data-view]").forEach(btn=>{
@@ -1946,7 +1541,9 @@
       document.querySelectorAll(".tab-btn[data-view]").forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
       currentView=btn.dataset.view;
+
       profileView.classList.toggle("show", currentView==="profile");
+      document.querySelector("main").style.paddingTop = currentView==="profile" ? "0" : "";
 
       if(currentView==="search"){
         document.getElementById("searchInput").focus();
@@ -1965,45 +1562,39 @@
 
   // ---------- Profile actions ----------
   document.getElementById("exportAllBtn").addEventListener("click", ()=>{
-    downloadZip(baseList(), "lamha-export.zip");
+    downloadZip(baseList(), "lamha-photos.zip");
   });
   document.getElementById("clearAllBtn").addEventListener("click", async ()=>{
     const list=baseList();
-    if(!list.length){ toast("ما فيه ملفات للحذف"); return; }
-    if(!confirm(`تحذف كل الملفات (${list.length})؟ هذا الإجراء ما ينرجع.`)) return;
-    await dbClearAllMedia();
-    images.forEach(r=>{
-      if(r.thumbUrl) URL.revokeObjectURL(r.thumbUrl);
-      if(r.fullUrl) URL.revokeObjectURL(r.fullUrl);
-    });
+    if(!list.length){ toast("ما فيه صور للحذف"); return; }
+    if(!confirm(`تحذف كل الصور (${list.length})؟ هذا الإجراء ما ينرجع.`)) return;
+    for(const rec of list){ await dbDel(rec.id); URL.revokeObjectURL(rec.url); }
     images=[];
     renderGrid();
-    toast("تم مسح كل الملفات");
+    toast("تم مسح كل الصور");
   });
 
   // ---------- Upload wiring ----------
   document.getElementById("addTabBtn").addEventListener("click", ()=> fileInput.click());
   document.getElementById("emptyUploadBtn").addEventListener("click", ()=> fileInput.click());
   fileInput.addEventListener("change", e=>{ handleFiles(e.target.files); fileInput.value=""; });
+
   ["dragover","drop"].forEach(ev=> window.addEventListener(ev, e=>e.preventDefault()));
   window.addEventListener("drop", e=>{
     if(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
   });
 
-  // ============================================================
-  // INIT — only metadata is read eagerly; thumbnails/full files
-  // load incrementally as the user actually scrolls/opens things.
-  // ============================================================
+  // ---------- Init ----------
   (async function init(){
     try{
       db=await openDB();
       const stored=await dbAll();
       stored.sort((a,b)=>b.date-a.date);
-      images=stored; // metadata only — no blobs, no object URLs yet
+      images=stored.map(r=>({...r, url:URL.createObjectURL(r.blob)}));
       albums=await dbAllAlbums();
       renderAlbumChips();
       renderGrid();
-      setTimeout(sigBacklogPass, 1200);
+      setTimeout(sigBacklogPass, 600);
     }catch(err){
       console.error(err);
       toast("تعذّر فتح قاعدة البيانات المحلية");
