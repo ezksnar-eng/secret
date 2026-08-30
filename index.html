@@ -548,7 +548,7 @@
 </nav>
 </div>
 
-<input type="file" id="fileInput" accept="image/*,video/*" multiple>
+<input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.heic,.heif,.mp4,.mov,.webm,.mkv,.3gp,.avi,image/*,video/*" multiple>
 
 <!-- Detail (pin) fullscreen view -->
 <div class="detail" id="detail">
@@ -884,7 +884,7 @@
   }
   function generateThumb(file, kind){
     return new Promise((resolve)=>{
-      const MAX=480;
+      const MAX=400;
       try{
         if(kind==="video"){
           const v=document.createElement("video");
@@ -897,7 +897,7 @@
               const c=document.createElement("canvas");
               c.width=Math.max(1,Math.round(w*scale)); c.height=Math.max(1,Math.round(h*scale));
               c.getContext("2d").drawImage(v,0,0,c.width,c.height);
-              c.toBlob(b=>{ URL.revokeObjectURL(url); resolve(b); }, "image/jpeg", 0.75);
+              c.toBlob(b=>{ URL.revokeObjectURL(url); resolve(b); }, "image/jpeg", 0.7);
             }catch(e){ URL.revokeObjectURL(url); resolve(null); }
           };
           v.onerror=()=>{ URL.revokeObjectURL(url); resolve(null); };
@@ -908,7 +908,7 @@
             const c=document.createElement("canvas");
             c.width=Math.max(1,Math.round(w*scale)); c.height=Math.max(1,Math.round(h*scale));
             c.getContext("2d").drawImage(drawSrc,0,0,c.width,c.height);
-            c.toBlob(b=>resolve(b), "image/jpeg", 0.78);
+            c.toBlob(b=>resolve(b), "image/jpeg", 0.72);
           };
           if(window.createImageBitmap){
             createImageBitmap(file).then(bmp=>{ finish(bmp.width,bmp.height,bmp); if(bmp.close) bmp.close(); }).catch(()=>resolve(null));
@@ -1041,6 +1041,72 @@
     }
     if(detailId){ renderSimilar(detailId); }
   }
+  // similar-grid: chunked + lazy just like the main grid — with an
+  // uncapped match list, firing every thumb fetch at once was exactly
+  // what froze the detail view on open. Same fix, same pattern.
+  const SIM_PAGE_SIZE=24;
+  let simRenderedCount=0;
+  let simCurrentList=[];
+  let simSentinelObserver=null;
+  let simLazyObserver=null;
+
+  function getSimLazyObserver(){
+    if(simLazyObserver) return simLazyObserver;
+    simLazyObserver=new IntersectionObserver((entries)=>{
+      entries.forEach(en=>{
+        if(!en.isIntersecting) return;
+        const el=en.target;
+        simLazyObserver.unobserve(el);
+        const id=el.dataset.id;
+        const rec=images.find(i=>i.id===id);
+        if(!rec) return;
+        ensureThumbUrl(rec).then(url=>{
+          const img=el.querySelector("img");
+          if(img && url) img.src=url;
+        });
+      });
+    }, {root:document.getElementById("detail"), rootMargin:"600px 0px"});
+    return simLazyObserver;
+  }
+  function buildSimilarPinEl(item){
+    const p=document.createElement("div");
+    p.className="similar-pin";
+    p.dataset.id=item.id;
+    const img=document.createElement("img");
+    img.alt=item.name; img.loading="lazy";
+    if(item.thumbUrl) img.src=item.thumbUrl; // already cached from the main grid
+    p.appendChild(img);
+    p.addEventListener("click", ()=> openDetail(item.id));
+    if(!item.thumbUrl) getSimLazyObserver().observe(p);
+    return p;
+  }
+  function removeSimSentinel(){
+    const s=document.getElementById("simSentinel");
+    if(s){ if(simSentinelObserver) simSentinelObserver.unobserve(s); s.remove(); }
+  }
+  function ensureSimSentinel(){
+    const wrap=document.getElementById("similarGrid");
+    let s=document.getElementById("simSentinel");
+    if(!s){ s=document.createElement("div"); s.id="simSentinel"; s.style.cssText="height:1px;break-inside:avoid;"; }
+    wrap.appendChild(s);
+    if(!simSentinelObserver){
+      simSentinelObserver=new IntersectionObserver((entries)=>{
+        entries.forEach(en=>{ if(en.isIntersecting) appendNextSimChunk(); });
+      }, {root:document.getElementById("detail"), rootMargin:"800px 0px"});
+    }
+    simSentinelObserver.unobserve(s);
+    simSentinelObserver.observe(s);
+  }
+  function appendNextSimChunk(){
+    removeSimSentinel();
+    const wrap=document.getElementById("similarGrid");
+    const next=simCurrentList.slice(simRenderedCount, simRenderedCount+SIM_PAGE_SIZE);
+    const frag=document.createDocumentFragment();
+    next.forEach(item=> frag.appendChild(buildSimilarPinEl(item)));
+    wrap.appendChild(frag);
+    simRenderedCount+=next.length;
+    if(simRenderedCount<simCurrentList.length) ensureSimSentinel();
+  }
   function getSimilar(rec){
     if(!rec || rec.kind==="video" || !rec.sig) return [];
     const pool=baseList().filter(i=>i.id!==rec.id && i.kind!=="video" && i.sig);
@@ -1057,6 +1123,7 @@
     const rec=images.find(i=>i.id===id);
     const wrap=document.getElementById("similarGrid");
     const section=document.getElementById("similarSection");
+    removeSimSentinel();
     if(!rec || rec.kind==="video"){ section.style.display="none"; return; }
     if(!rec.sig){
       wrap.innerHTML=`<div class="similar-empty">جاري تحليل الصور…</div>`;
@@ -1071,16 +1138,9 @@
     }
     wrap.innerHTML="";
     section.style.display="block";
-    list.forEach(item=>{
-      const p=document.createElement("div");
-      p.className="similar-pin";
-      const img=document.createElement("img");
-      img.alt=item.name; img.loading="lazy";
-      p.appendChild(img);
-      p.addEventListener("click", ()=> openDetail(item.id));
-      wrap.appendChild(p);
-      ensureThumbUrl(item).then(url=>{ if(url) img.src=url; });
-    });
+    simCurrentList=list;
+    simRenderedCount=0;
+    appendNextSimChunk();
   }
 
   // ============================================================
@@ -1397,13 +1457,28 @@
   // A small worker pool handles a few at a time; the grid only
   // re-renders periodically during a big batch, not per file.
   // ============================================================
+  async function fastFingerprint(file){
+    try{
+      const chunkSize=Math.min(file.size, 65536);
+      const buf=await file.slice(0, chunkSize).arrayBuffer();
+      const digest=await crypto.subtle.digest("SHA-256", buf);
+      const hex=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join("");
+      return file.size+"_"+hex;
+    }catch(e){ return file.size+"_"+file.name; }
+  }
+  const knownFingerprints=new Set();
+
   async function processOneFile(file){
+    const fp=await fastFingerprint(file);
+    if(knownFingerprints.has(fp)) return {duplicate:true};
+    knownFingerprints.add(fp);
+
     const kind = file.type.startsWith("video/") ? "video" : "image";
     const dims = await getMediaDims(file, kind).catch(()=>({w:0,h:0,duration:0}));
     const thumbBlob = await generateThumb(file, kind).catch(()=>null);
     const meta={
       id:uid(), name:file.name||("file_"+uid()), type:file.type||"application/octet-stream",
-      kind, date:Date.now(), fav:false, size:file.size,
+      kind, date:Date.now(), fav:false, size:file.size, fingerprint:fp,
       width:dims.w||null, height:dims.h||null, duration:dims.duration||null
     };
     await dbAddFull(meta, file, thumbBlob);
@@ -1417,15 +1492,16 @@
     const files=Array.from(fileList).filter(f=> f.type.startsWith("image/") || f.type.startsWith("video/"));
     if(!files.length) return;
     const total=files.length;
-    let done=0, failed=0;
+    let done=0, failed=0, dupes=0;
     progressWrap.classList.add("show"); progressFill.style.width="1%";
     toast(total>1 ? `جاري رفع ${total} ملف — يترفعون وحدة وحدة بالخلفية…` : "جاري رفع الملف…");
-    const CONCURRENCY=4;
+    const CONCURRENCY=8;
     let idx=0;
     function next(){
       if(idx>=files.length) return Promise.resolve();
       const file=files[idx++];
       return processOneFile(file)
+        .then(res=>{ if(res && res.duplicate) dupes++; })
         .catch(err=>{ console.error(err); failed++; })
         .then(()=>{
           done++;
@@ -1439,7 +1515,11 @@
     Promise.all(runners).then(()=>{
       renderGrid();
       setTimeout(()=>{ progressWrap.classList.remove("show"); progressFill.style.width="0%"; }, 400);
-      toast(failed ? `تم رفع ${done-failed} من ${total} — تعذّر رفع ${failed}` : `تم رفع ${done} ملف`);
+      const added=done-failed-dupes;
+      let msg=`تم رفع ${added} ملف`;
+      if(dupes) msg+=` — تجاهلت ${dupes} مكرّرة`;
+      if(failed) msg+=` — تعذّر رفع ${failed}`;
+      toast(msg);
     });
   }
 
@@ -1474,12 +1554,16 @@
     }catch(e){ return []; }
   }
   async function addImageFromBlob(blob, name){
+    const fp=await fastFingerprint(blob);
+    if(knownFingerprints.has(fp)) return {duplicate:true};
+    knownFingerprints.add(fp);
     const kind = (blob.type||"").startsWith("video/") ? "video" : "image";
     const dims = await getMediaDims(blob, kind).catch(()=>({w:0,h:0,duration:0}));
     const thumbBlob = await generateThumb(blob, kind).catch(()=>null);
     const meta={
       id:uid(), name: name||("image_"+uid()+".jpg"), type: blob.type||"image/jpeg",
-      kind, date:Date.now(), fav:false, size:blob.size, width:dims.w||null, height:dims.h||null, duration:dims.duration||null
+      kind, date:Date.now(), fav:false, size:blob.size, fingerprint:fp,
+      width:dims.w||null, height:dims.h||null, duration:dims.duration||null
     };
     await dbAddFull(meta, blob, thumbBlob);
     const withUrl={...meta};
@@ -1937,6 +2021,7 @@
       const stored=await dbAll();
       stored.sort((a,b)=>b.date-a.date);
       images=stored;
+      stored.forEach(r=>{ if(r.fingerprint) knownFingerprints.add(r.fingerprint); });
       albums=await dbAllAlbums();
       renderAlbumChips();
       renderGrid();
