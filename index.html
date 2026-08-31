@@ -354,6 +354,26 @@
   }
   .import-log div{ direction:ltr; text-align:right; unicode-bidi:plaintext; word-break:break-all; }
 
+  .import-results-bar{ display:flex; align-items:center; justify-content:space-between; padding:8px 16px; }
+  .import-results-bar span{ font-size:12px; color:var(--ink-dim); }
+  .import-results-grid{
+    column-count:3; column-gap:6px; padding:0 12px; max-height:44vh; overflow-y:auto;
+  }
+  .import-cell{
+    break-inside:avoid; margin-bottom:6px; position:relative; border-radius:10px; overflow:hidden;
+    background:var(--surface3); cursor:pointer; opacity:.4; transition:opacity .15s ease;
+  }
+  .import-cell.picked{ opacity:1; }
+  .import-cell img, .import-cell video{ width:100%; display:block; height:auto; max-height:160px; object-fit:cover; }
+  .import-cell .import-check{
+    position:absolute; top:5px; right:5px; width:20px; height:20px; border-radius:50%;
+    background:var(--red); display:flex; align-items:center; justify-content:center; border:2px solid #fff;
+  }
+  .import-cell .import-vid-badge{
+    position:absolute; bottom:5px; left:5px; width:20px; height:20px; border-radius:50%;
+    background:#000000a0; display:flex; align-items:center; justify-content:center; font-size:10px; color:#fff;
+  }
+
   .progress-wrap{
     position:fixed; top:calc(var(--safe-t) + 2px); right:0; left:0; z-index:80;
     display:none;
@@ -647,17 +667,33 @@
   </div>
 
   <div class="menu-card" id="menuCardImport" style="display:none;">
-    <div class="menu-title">استيراد صور من رابط</div>
-    <div class="rename-box">
-      <textarea class="import-textarea" id="importUrlsInput" rows="4" placeholder="حط رابط صورة مباشر أو رابط صفحة — رابط بكل سطر"></textarea>
+    <div class="menu-title" id="importTitle">استيراد من رابط موقع</div>
+
+    <div id="importStep1">
+      <div class="rename-box">
+        <input type="text" id="importUrlInput" placeholder="رابط صفحة، أو رابط صورة/فيديو مباشر">
+      </div>
+      <div class="import-note">
+        اكتب رابط صفحة وبتشوف كل الصور والفيديوهات الموجودة فيها قبل لا تنزّل أي شي، وتقدر تختار وتلغي اللي ما تريده. يشتغل مع أغلب المواقع (يحاول مباشر وبعدين عبر وسيط تلقائيًا) — مواقع محمية جدًا ممكن توقف حتى الوسيط.
+      </div>
+      <div class="import-log" id="importLog" style="display:none;"></div>
+      <div class="rename-actions">
+        <button class="cancel" id="importCancel">إغلاق</button>
+        <button class="confirm" id="importScanBtn">بحث</button>
+      </div>
     </div>
-    <div class="import-note">
-      يشتغل زين مع روابط الصور المباشرة (تنتهي بـ jpg/png/webp) أو مواقع تسمح بالوصول من متصفح خارجي. مواقع كثيرة تمنع هذا لأسباب أمنية بالمتصفح (سياسة CORS) — وبهالحالة تقدر تنزّل الصورة على جهازك وترفعها من "رفع من الجهاز".
-    </div>
-    <div class="import-log" id="importLog" style="display:none;"></div>
-    <div class="rename-actions">
-      <button class="cancel" id="importCancel">إغلاق</button>
-      <button class="confirm" id="importGoBtn">سحب الصور</button>
+
+    <div id="importStep2" style="display:none;">
+      <div class="import-results-bar">
+        <button class="chip" id="importSelectAllBtn">تحديد الكل</button>
+        <span id="importResultsCount"></span>
+      </div>
+      <div class="import-results-grid" id="importResultsGrid"></div>
+      <div class="import-log" id="importDownloadLog" style="display:none;"></div>
+      <div class="rename-actions">
+        <button class="cancel" id="importBackBtn">رجوع</button>
+        <button class="confirm" id="importDownloadSelectedBtn">تحميل المحدد</button>
+      </div>
     </div>
   </div>
 </div>
@@ -884,7 +920,7 @@
   }
   function generateThumb(file, kind){
     return new Promise((resolve)=>{
-      const MAX=400;
+      const MAX=560;
       try{
         if(kind==="video"){
           const v=document.createElement("video");
@@ -897,7 +933,7 @@
               const c=document.createElement("canvas");
               c.width=Math.max(1,Math.round(w*scale)); c.height=Math.max(1,Math.round(h*scale));
               c.getContext("2d").drawImage(v,0,0,c.width,c.height);
-              c.toBlob(b=>{ URL.revokeObjectURL(url); resolve(b); }, "image/jpeg", 0.7);
+              c.toBlob(b=>{ URL.revokeObjectURL(url); resolve(b); }, "image/jpeg", 0.8);
             }catch(e){ URL.revokeObjectURL(url); resolve(null); }
           };
           v.onerror=()=>{ URL.revokeObjectURL(url); resolve(null); };
@@ -908,7 +944,7 @@
             const c=document.createElement("canvas");
             c.width=Math.max(1,Math.round(w*scale)); c.height=Math.max(1,Math.round(h*scale));
             c.getContext("2d").drawImage(drawSrc,0,0,c.width,c.height);
-            c.toBlob(b=>resolve(b), "image/jpeg", 0.72);
+            c.toBlob(b=>resolve(b), "image/jpeg", 0.85);
           };
           if(window.createImageBitmap){
             createImageBitmap(file).then(bmp=>{ finish(bmp.width,bmp.height,bmp); if(bmp.close) bmp.close(); }).catch(()=>resolve(null));
@@ -934,6 +970,14 @@
           blob=await generateThumb(full, rec.kind||"image");
           if(blob){ try{ await dbPutThumb(rec.id, blob); }catch(e){} }
           else blob=full;
+          // videos skip dims capture at upload time — fill it in now, once, lazily
+          if(rec.kind==="video" && !rec.width){
+            const dims=await getMediaDims(full, "video").catch(()=>null);
+            if(dims && dims.w){
+              rec.width=dims.w; rec.height=dims.h; rec.duration=dims.duration||null;
+              try{ await dbPut(stripForSave(rec)); }catch(e){}
+            }
+          }
         }
       }
       if(blob) rec.thumbUrl=URL.createObjectURL(blob);
@@ -1049,6 +1093,7 @@
   let simCurrentList=[];
   let simSentinelObserver=null;
   let simLazyObserver=null;
+  let simFullPrefetchObserver=null;
 
   function getSimLazyObserver(){
     if(simLazyObserver) return simLazyObserver;
@@ -1068,6 +1113,19 @@
     }, {root:document.getElementById("detail"), rootMargin:"600px 0px"});
     return simLazyObserver;
   }
+  function getSimFullPrefetchObserver(){
+    if(simFullPrefetchObserver) return simFullPrefetchObserver;
+    simFullPrefetchObserver=new IntersectionObserver((entries)=>{
+      entries.forEach(en=>{
+        if(!en.isIntersecting) return;
+        simFullPrefetchObserver.unobserve(en.target);
+        const id=en.target.dataset.id;
+        const rec=images.find(i=>i.id===id);
+        if(rec && !rec.fullUrl) ensureFullUrl(rec);
+      });
+    }, {root:document.getElementById("detail"), rootMargin:"200px 0px"});
+    return simFullPrefetchObserver;
+  }
   function buildSimilarPinEl(item){
     const p=document.createElement("div");
     p.className="similar-pin";
@@ -1078,6 +1136,7 @@
     p.appendChild(img);
     p.addEventListener("click", ()=> openDetail(item.id));
     if(!item.thumbUrl) getSimLazyObserver().observe(p);
+    getSimFullPrefetchObserver().observe(p);
     return p;
   }
   function removeSimSentinel(){
@@ -1173,6 +1232,24 @@
     return lazyThumbObserver;
   }
 
+  // separate, tighter-radius observer: quietly warms the full-resolution
+  // cache for anything about to scroll into view, so opening it later is
+  // instant (no fetch happening at the moment you actually tap it)
+  let fullPrefetchObserver=null;
+  function getFullPrefetchObserver(){
+    if(fullPrefetchObserver) return fullPrefetchObserver;
+    fullPrefetchObserver=new IntersectionObserver((entries)=>{
+      entries.forEach(en=>{
+        if(!en.isIntersecting) return;
+        fullPrefetchObserver.unobserve(en.target);
+        const id=en.target.dataset.id;
+        const rec=images.find(i=>i.id===id);
+        if(rec && !rec.fullUrl) ensureFullUrl(rec);
+      });
+    }, {root:document.querySelector("main"), rootMargin:"250px 0px"});
+    return fullPrefetchObserver;
+  }
+
   function buildPinEl(rec){
     const pin=document.createElement("div");
     pin.className="pin"+(rec.fav?" is-fav":"")+(selectedIds.has(rec.id)?" selected":"")+(rec.albumId?" has-album":"");
@@ -1254,6 +1331,7 @@
     });
 
     if(!rec.thumbUrl) getLazyThumbObserver().observe(pin);
+    getFullPrefetchObserver().observe(pin);
     return pin;
   }
 
@@ -1474,8 +1552,15 @@
     knownFingerprints.add(fp);
 
     const kind = file.type.startsWith("video/") ? "video" : "image";
-    const dims = await getMediaDims(file, kind).catch(()=>({w:0,h:0,duration:0}));
-    const thumbBlob = await generateThumb(file, kind).catch(()=>null);
+    // videos: skip dims/poster generation during upload entirely — seeking and
+    // decoding a frame is what made bulk video uploads crawl. The blob is saved
+    // immediately (as fast as an image), and the poster/dims are generated once,
+    // lazily, only when that video's thumbnail actually needs to be shown.
+    let dims={w:0,h:0,duration:0}, thumbBlob=null;
+    if(kind==="image"){
+      dims = await getMediaDims(file, kind).catch(()=>({w:0,h:0,duration:0}));
+      thumbBlob = await generateThumb(file, kind).catch(()=>null);
+    }
     const meta={
       id:uid(), name:file.name||("file_"+uid()), type:file.type||"application/octet-stream",
       kind, date:Date.now(), fav:false, size:file.size, fingerprint:fp,
@@ -1524,44 +1609,105 @@
   }
 
   // ============================================================
-  // IMPORT FROM URL — direct fetch only (works with direct image
-  // links and sites that allow cross-origin access). Many sites
-  // block this on purpose (CORS) — that's a browser security
-  // limit, not something client-side code can bypass.
+  // IMPORT FROM URL — scans a page first and shows every image/
+  // video it found so you can pick exactly what to keep before
+  // anything downloads. Tries a direct fetch first, then falls
+  // back automatically through a couple of public CORS relays for
+  // sites that block direct cross-origin access. A handful of
+  // heavily-protected sites can still block every route — that's
+  // a browser security limit (CORS), not something client-side
+  // code can force past. Preview thumbnails inside the picker load
+  // straight from the source (that part is never blocked by CORS,
+  // only actually saving the bytes locally is).
   // ============================================================
-  async function fetchImageAsBlob(url){
-    const resp=await fetch(url, {mode:"cors", credentials:"omit"});
-    if(!resp.ok) throw new Error("HTTP "+resp.status);
-    const ct=resp.headers.get("content-type")||"";
-    if(!ct.startsWith("image/")) throw new Error("NOT_IMAGE");
-    return await resp.blob();
+  const CORS_PROXIES=[
+    u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u),
+    u=>"https://corsproxy.io/?"+encodeURIComponent(u)
+  ];
+  function fetchT(url, opts, ms){
+    const ctrl=new AbortController();
+    const t=setTimeout(()=>ctrl.abort(), ms||15000);
+    return fetch(url, {...opts, signal:ctrl.signal}).finally(()=>clearTimeout(t));
+  }
+  async function fetchMediaAsBlob(url){
+    try{
+      const resp=await fetchT(url, {mode:"cors", credentials:"omit"});
+      if(resp.ok){
+        const ct=resp.headers.get("content-type")||"";
+        if(ct.startsWith("image/")||ct.startsWith("video/")) return await resp.blob();
+      }
+    }catch(e){ /* try proxies */ }
+    for(const build of CORS_PROXIES){
+      try{
+        const resp=await fetchT(build(url), {mode:"cors", credentials:"omit"});
+        if(resp.ok){
+          const blob=await resp.blob();
+          if(blob && blob.size>200) return blob;
+        }
+      }catch(e){ /* try next proxy */ }
+    }
+    throw new Error("BLOCKED");
+  }
+  async function fetchHtml(url){
+    try{
+      const resp=await fetchT(url, {mode:"cors", credentials:"omit"});
+      if(resp.ok) return await resp.text();
+    }catch(e){ /* try proxies */ }
+    for(const build of CORS_PROXIES){
+      try{
+        const resp=await fetchT(build(url), {mode:"cors", credentials:"omit"});
+        if(resp.ok) return await resp.text();
+      }catch(e){ /* try next proxy */ }
+    }
+    throw new Error("BLOCKED");
   }
   function nameFromUrl(url){
     try{
       const clean=url.split("?")[0].split("#")[0];
       const last=decodeURIComponent(clean.split("/").filter(Boolean).pop()||"");
-      return last || ("image_"+uid()+".jpg");
-    }catch(e){ return "image_"+uid()+".jpg"; }
+      return last || ("file_"+uid());
+    }catch(e){ return "file_"+uid(); }
   }
-  function extractImageUrlsFromHtml(html, baseUrl){
+  function looksLikeDirectMedia(url){
+    return /\.(jpe?g|png|gif|webp|bmp|avif|mp4|webm|mov|mkv|m4v)(\?|#|$)/i.test(url);
+  }
+  function extractMediaFromHtml(html, baseUrl){
+    const out=[]; const seen=new Set();
+    const add=(src,kind)=>{
+      if(!src) return;
+      try{
+        const abs=new URL(src, baseUrl).href;
+        if(seen.has(abs)) return;
+        seen.add(abs);
+        out.push({url:abs, kind});
+      }catch(e){}
+    };
     try{
       const doc=new DOMParser().parseFromString(html, "text/html");
-      const found=Array.from(doc.querySelectorAll("img[src], img[data-src]")).map(el=>{
-        const src=el.getAttribute("src")||el.getAttribute("data-src");
-        try{ return new URL(src, baseUrl).href; }catch(e){ return null; }
-      }).filter(Boolean);
-      return Array.from(new Set(found)).slice(0,40);
-    }catch(e){ return []; }
+      doc.querySelectorAll("img[src]").forEach(el=> add(el.getAttribute("src"),"image"));
+      doc.querySelectorAll("img[data-src]").forEach(el=> add(el.getAttribute("data-src"),"image"));
+      doc.querySelectorAll("video[src]").forEach(el=> add(el.getAttribute("src"),"video"));
+      doc.querySelectorAll("video source[src]").forEach(el=> add(el.getAttribute("src"),"video"));
+      doc.querySelectorAll("a[href]").forEach(el=>{
+        const href=el.getAttribute("href")||"";
+        if(/\.(jpe?g|png|gif|webp|bmp|avif)(\?|#|$)/i.test(href)) add(href,"image");
+        else if(/\.(mp4|webm|mov|mkv|m4v)(\?|#|$)/i.test(href)) add(href,"video");
+      });
+    }catch(e){}
+    return out.slice(0,120);
   }
   async function addImageFromBlob(blob, name){
     const fp=await fastFingerprint(blob);
     if(knownFingerprints.has(fp)) return {duplicate:true};
     knownFingerprints.add(fp);
     const kind = (blob.type||"").startsWith("video/") ? "video" : "image";
-    const dims = await getMediaDims(blob, kind).catch(()=>({w:0,h:0,duration:0}));
-    const thumbBlob = await generateThumb(blob, kind).catch(()=>null);
+    let thumbBlob=null, dims={w:0,h:0,duration:0};
+    if(kind==="image"){
+      dims = await getMediaDims(blob, kind).catch(()=>({w:0,h:0,duration:0}));
+      thumbBlob = await generateThumb(blob, kind).catch(()=>null);
+    }
     const meta={
-      id:uid(), name: name||("image_"+uid()+".jpg"), type: blob.type||"image/jpeg",
+      id:uid(), name: name||("file_"+uid()), type: blob.type||(kind==="video"?"video/mp4":"image/jpeg"),
       kind, date:Date.now(), fav:false, size:blob.size, fingerprint:fp,
       width:dims.w||null, height:dims.h||null, duration:dims.duration||null
     };
@@ -1573,60 +1719,121 @@
     if(kind==="image") ensureSig(withUrl).then(()=>{ if(detailId) renderSimilar(detailId); });
     return withUrl;
   }
-  async function importOneUrl(url){
-    try{
-      const blob=await fetchImageAsBlob(url);
-      await addImageFromBlob(blob, nameFromUrl(url));
-      return {ok:true, count:1};
-    }catch(e1){ /* not a direct image URL — try scraping the page */ }
-    try{
-      const resp=await fetch(url, {mode:"cors", credentials:"omit"});
-      if(!resp.ok) throw new Error("HTTP "+resp.status);
-      const html=await resp.text();
-      const imgUrls=extractImageUrlsFromHtml(html, url);
-      if(!imgUrls.length) return {ok:false, error:"no_images"};
-      let success=0;
-      for(const iu of imgUrls){
-        try{ const blob=await fetchImageAsBlob(iu); await addImageFromBlob(blob, nameFromUrl(iu)); success++; }
-        catch(e){ /* skip, keep going */ }
-      }
-      return success>0 ? {ok:true, count:success} : {ok:false, error:"blocked"};
-    }catch(e2){
-      return {ok:false, error:"blocked"};
-    }
-  }
-  async function runImport(){
-    const raw=document.getElementById("importUrlsInput").value;
-    const lines=Array.from(new Set(raw.split("\n").map(s=>s.trim()).filter(Boolean)));
-    if(!lines.length){ toast("حط رابط وحد على الأقل"); return; }
-    const btn=document.getElementById("importGoBtn");
+
+  let importCandidates=[];
+  async function runImportScan(){
+    const url=document.getElementById("importUrlInput").value.trim();
+    if(!url){ toast("حط رابط أول"); return; }
+    const btn=document.getElementById("importScanBtn");
     const logWrap=document.getElementById("importLog");
-    btn.disabled=true; btn.textContent="جاري السحب…";
+    btn.disabled=true; btn.textContent="جاري البحث…";
     logWrap.style.display="flex"; logWrap.innerHTML="";
-    let successTotal=0, failTotal=0;
-    for(const url of lines){
+    const line=document.createElement("div");
+    line.textContent="⏳ "+url;
+    logWrap.appendChild(line);
+
+    // a direct media link imports right away — no picker needed for just one file
+    if(looksLikeDirectMedia(url)){
+      try{
+        const blob=await fetchMediaAsBlob(url);
+        const res=await addImageFromBlob(blob, nameFromUrl(url));
+        line.textContent = res && res.duplicate ? "↷ "+url+" — موجودة مسبقًا" : "✓ "+url+" — تم الاستيراد";
+        toast(res && res.duplicate ? "الملف موجود عندك أصلاً" : "تم الاستيراد");
+        btn.disabled=false; btn.textContent="بحث";
+        return;
+      }catch(e){ /* not actually a direct file — fall through to page scan */ }
+    }
+
+    try{
+      const html=await fetchHtml(url);
+      const candidates=extractMediaFromHtml(html, url);
+      if(!candidates.length){
+        line.textContent="✗ "+url+" — ما لقيت صور أو فيديوهات بهالصفحة";
+        btn.disabled=false; btn.textContent="بحث";
+        return;
+      }
+      importCandidates=candidates.map(c=>({...c, selected:true}));
+      logWrap.style.display="none";
+      document.getElementById("importStep1").style.display="none";
+      document.getElementById("importStep2").style.display="block";
+      document.getElementById("importTitle").textContent=`لقيت ${candidates.length} — اختار وشيل اللي ما تريده`;
+      renderImportResults();
+    }catch(e){
+      line.textContent="✗ "+url+" — تعذّر الوصول لهالموقع حتى عبر الوسيط";
+    }
+    btn.disabled=false; btn.textContent="بحث";
+  }
+  function renderImportResults(){
+    const wrap=document.getElementById("importResultsGrid");
+    wrap.innerHTML="";
+    importCandidates.forEach(c=>{
+      const cell=document.createElement("div");
+      cell.className="import-cell"+(c.selected?" picked":"");
+      const media = c.kind==="video" ? document.createElement("video") : document.createElement("img");
+      media.src=c.url;
+      if(c.kind==="video"){ media.muted=true; media.preload="metadata"; }
+      else{ media.loading="lazy"; }
+      cell.appendChild(media);
+      const check=document.createElement("div");
+      check.className="import-check";
+      check.innerHTML=`<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      cell.appendChild(check);
+      if(c.kind==="video"){
+        const vb=document.createElement("div");
+        vb.className="import-vid-badge";
+        vb.innerHTML=`<svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7-11-7z" fill="#fff"/></svg>`;
+        cell.appendChild(vb);
+      }
+      cell.addEventListener("click", ()=>{
+        c.selected=!c.selected;
+        cell.classList.toggle("picked", c.selected);
+        updateImportCount();
+      });
+      wrap.appendChild(cell);
+    });
+    updateImportCount();
+  }
+  function updateImportCount(){
+    const n=importCandidates.filter(c=>c.selected).length;
+    document.getElementById("importResultsCount").textContent = `${n} من ${importCandidates.length} محددة`;
+  }
+  document.getElementById("importSelectAllBtn").addEventListener("click", ()=>{
+    const allSelected=importCandidates.every(c=>c.selected);
+    importCandidates.forEach(c=>c.selected=!allSelected);
+    renderImportResults();
+  });
+  document.getElementById("importBackBtn").addEventListener("click", ()=>{
+    document.getElementById("importStep2").style.display="none";
+    document.getElementById("importStep1").style.display="block";
+    document.getElementById("importTitle").textContent="استيراد من رابط موقع";
+  });
+  document.getElementById("importDownloadSelectedBtn").addEventListener("click", async ()=>{
+    const picked=importCandidates.filter(c=>c.selected);
+    if(!picked.length){ toast("ما حددت شي"); return; }
+    const btn=document.getElementById("importDownloadSelectedBtn");
+    const logWrap=document.getElementById("importDownloadLog");
+    btn.disabled=true; btn.textContent="جاري التحميل…";
+    logWrap.style.display="flex"; logWrap.innerHTML="";
+    let success=0, dup=0, fail=0;
+    for(const c of picked){
       const line=document.createElement("div");
-      line.textContent="⏳ "+url;
+      line.textContent="⏳ "+c.url;
       logWrap.appendChild(line);
       logWrap.scrollTop=logWrap.scrollHeight;
       try{
-        const res=await importOneUrl(url);
-        if(res.ok){
-          successTotal+=(res.count||1);
-          line.textContent="✓ "+url+(res.count>1?` — ${res.count} صور`:"");
-        }else{
-          failTotal++;
-          line.textContent="✗ "+url+(res.error==="no_images" ? " — ما لقيت صور بالصفحة" : " — الموقع يمنع الوصول من متصفح خارجي (CORS)");
-        }
-      }catch(e){
-        failTotal++;
-        line.textContent="✗ "+url+" — فشل غير متوقع";
-      }
+        const blob=await fetchMediaAsBlob(c.url);
+        const res=await addImageFromBlob(blob, nameFromUrl(c.url));
+        if(res && res.duplicate){ dup++; line.textContent="↷ "+c.url+" — موجودة مسبقًا"; }
+        else{ success++; line.textContent="✓ "+c.url; }
+      }catch(e){ fail++; line.textContent="✗ "+c.url+" — تعذّر التحميل"; }
       logWrap.scrollTop=logWrap.scrollHeight;
     }
-    btn.disabled=false; btn.textContent="سحب الصور";
-    toast(failTotal ? `تم استيراد ${successTotal} صورة — وتعذّر سحب ${failTotal}` : `تم استيراد ${successTotal} صورة`);
-  }
+    btn.disabled=false; btn.textContent="تحميل المحدد";
+    let msg=`تم استيراد ${success}`;
+    if(dup) msg+=` — تجاهل ${dup} مكرّرة`;
+    if(fail) msg+=` — تعذّر ${fail}`;
+    toast(msg);
+  });
 
   // ============================================================
   // DETAIL (PIN) VIEW — the full file is fetched and fully ready
@@ -1860,17 +2067,25 @@
   });
 
   document.getElementById("importUrlBtn").addEventListener("click", ()=>{
-    document.getElementById("importUrlsInput").value="";
+    document.getElementById("importUrlInput").value="";
     document.getElementById("importLog").style.display="none";
     document.getElementById("importLog").innerHTML="";
-    document.getElementById("importGoBtn").disabled=false;
-    document.getElementById("importGoBtn").textContent="سحب الصور";
+    document.getElementById("importDownloadLog").style.display="none";
+    document.getElementById("importDownloadLog").innerHTML="";
+    document.getElementById("importScanBtn").disabled=false;
+    document.getElementById("importScanBtn").textContent="بحث";
+    document.getElementById("importDownloadSelectedBtn").disabled=false;
+    document.getElementById("importDownloadSelectedBtn").textContent="تحميل المحدد";
+    document.getElementById("importTitle").textContent="استيراد من رابط موقع";
+    document.getElementById("importStep1").style.display="block";
+    document.getElementById("importStep2").style.display="none";
+    importCandidates=[];
     hideAllMenuCards();
     menuCardImport.style.display="block";
     menuSheet.classList.add("open");
   });
   document.getElementById("importCancel").addEventListener("click", closeMenu);
-  document.getElementById("importGoBtn").addEventListener("click", runImport);
+  document.getElementById("importScanBtn").addEventListener("click", runImportScan);
 
   // ============================================================
   // SELECTION MODE — direct DOM updates, no full grid rebuild
