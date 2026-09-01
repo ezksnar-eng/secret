@@ -462,6 +462,7 @@
   <div class="tabs-strip" id="tabsStrip">
     <button class="chip active" data-filter="all">الكل</button>
     <button class="chip" data-filter="fav">المفضّلة</button>
+    <button class="chip" data-filter="video">فيديو فقط</button>
     <div id="albumChipsWrap" style="display:contents;"></div>
     <button class="chip new-album-chip" id="newAlbumChip">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
@@ -610,7 +611,7 @@
   <div class="similar-section" id="similarSection">
     <div class="similar-title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="2" fill="currentColor"/><rect x="14" y="3" width="7" height="7" rx="2" fill="currentColor"/><rect x="3" y="14" width="7" height="7" rx="2" fill="currentColor"/><rect x="14" y="14" width="7" height="7" rx="2" fill="currentColor"/></svg>
-      صور مشابهة
+      ملفات مشابهة
     </div>
     <div class="similar-grid" id="similarGrid"></div>
   </div>
@@ -674,7 +675,7 @@
         <input type="text" id="importUrlInput" placeholder="رابط صفحة، أو رابط صورة/فيديو مباشر">
       </div>
       <div class="import-note">
-        اكتب رابط صفحة وبتشوف كل الصور والفيديوهات الموجودة فيها قبل لا تنزّل أي شي، وتقدر تختار وتلغي اللي ما تريده. يشتغل مع أغلب المواقع (يحاول مباشر وبعدين عبر وسيط تلقائيًا) — مواقع محمية جدًا ممكن توقف حتى الوسيط.
+        يشتغل زين مع مواقع تعرض الصور مباشرة بكود HTML. مواقع فيها حماية، أو مواقع حديثة تحمّل صورها عن طريق جافاسكربت بعد فتح الصفحة، ممكن ما تنلقى فيها أي صورة — هذا قيد تقني بالمتصفح نفسه (قراءة كود بدون تشغيل جافاسكربت الموقع)، ماكو طريقة مضمونة تتخطاه من داخل صفحة ويب عادية.
       </div>
       <div class="import-log" id="importLog" style="display:none;"></div>
       <div class="rename-actions">
@@ -859,6 +860,7 @@
   function visibleList(){
     let list=baseList();
     if(currentFilter==="fav" || currentView==="fav") list=list.filter(i=>i.fav);
+    if(currentFilter==="video") list=list.filter(i=>i.kind==="video");
     if(currentAlbumId) list=list.filter(i=>i.albumId===currentAlbumId);
     if(searchTerm.trim()) list=list.filter(i=>i.name.toLowerCase().includes(searchTerm.trim().toLowerCase()));
     list=list.slice().sort((a,b)=>{
@@ -920,7 +922,7 @@
   }
   function generateThumb(file, kind){
     return new Promise((resolve)=>{
-      const MAX=560;
+      const MAX=760;
       try{
         if(kind==="video"){
           const v=document.createElement("video");
@@ -944,7 +946,7 @@
             const c=document.createElement("canvas");
             c.width=Math.max(1,Math.round(w*scale)); c.height=Math.max(1,Math.round(h*scale));
             c.getContext("2d").drawImage(drawSrc,0,0,c.width,c.height);
-            c.toBlob(b=>resolve(b), "image/jpeg", 0.85);
+            c.toBlob(b=>resolve(b), "image/jpeg", 0.9);
           };
           if(window.createImageBitmap){
             createImageBitmap(file).then(bmp=>{ finish(bmp.width,bmp.height,bmp); if(bmp.close) bmp.close(); }).catch(()=>resolve(null));
@@ -1002,13 +1004,24 @@
   // SIMILARITY ENGINE (aHash + dHash + color layout) — images only,
   // ranks every match (no cap), runs off the thumbnail.
   // ============================================================
+  // ============================================================
+  // SIMILARITY ENGINE v2 — four combined signals instead of three,
+  // computed at higher resolution, and now runs for videos too
+  // (off their poster/cover frame, once generated) so recommendations
+  // mix photos and videos together instead of ignoring video entirely:
+  //  - aHash (10x10): overall brightness pattern
+  //  - dHash (11x10): structure / edges
+  //  - color layout (5x5 grid): where colors sit spatially
+  //  - hue histogram (16 bins): overall color palette/mood, independent
+  //    of composition — catches matches a layout-based signal misses
+  // ============================================================
   function computeSignature(url){
     return new Promise((resolve)=>{
       try{
         const img=new Image();
         img.onload=()=>{
           try{
-            const S=16;
+            const S=20;
             const c=document.createElement("canvas");
             c.width=S; c.height=S;
             const ctx=c.getContext("2d");
@@ -1016,15 +1029,19 @@
             const data=ctx.getImageData(0,0,S,S).data;
             const gray=new Array(S*S);
             for(let i=0;i<S*S;i++){ gray[i]=(data[i*4]+data[i*4+1]+data[i*4+2])/3; }
-            const aVals=[];
-            for(let by=0;by<8;by++) for(let bx=0;bx<8;bx++){
-              let sum=0;
-              for(let dy=0;dy<2;dy++) for(let dx=0;dx<2;dx++) sum+=gray[(by*2+dy)*S+(bx*2+dx)];
-              aVals.push(sum/4);
+
+            // aHash 10x10
+            const AN=10, ablk=S/AN, aVals=[];
+            for(let by=0;by<AN;by++) for(let bx=0;bx<AN;bx++){
+              let sum=0,n=0;
+              for(let dy=0;dy<ablk;dy++) for(let dx=0;dx<ablk;dx++){ sum+=gray[Math.floor(by*ablk+dy)*S+Math.floor(bx*ablk+dx)]; n++; }
+              aVals.push(sum/n);
             }
-            const aAvg=aVals.reduce((a,b)=>a+b,0)/64;
+            const aAvg=aVals.reduce((a,b)=>a+b,0)/aVals.length;
             let aHash=""; for(const v of aVals) aHash+=v>=aAvg?"1":"0";
-            const gw=9, gh=8, grid2=[];
+
+            // dHash 11x10 (gradient)
+            const gw=11, gh=10, grid2=[];
             for(let gy=0; gy<gh; gy++){
               const row=[];
               for(let gx=0; gx<gw; gx++){
@@ -1036,16 +1053,36 @@
             }
             let dHash="";
             for(let gy=0;gy<gh;gy++) for(let gx=0;gx<gw-1;gx++) dHash+=grid2[gy][gx]>grid2[gy][gx+1]?"1":"0";
-            const color=[]; const cell=S/4;
-            for(let by=0;by<4;by++) for(let bx=0;bx<4;bx++){
+
+            // color layout — 5x5 spatial grid, avg RGB per cell
+            const color=[]; const CN=5, cblk=S/CN;
+            for(let by=0;by<CN;by++) for(let bx=0;bx<CN;bx++){
               let r=0,g=0,b=0,n=0;
-              for(let dy=0;dy<cell;dy++) for(let dx=0;dx<cell;dx++){
-                const x=bx*cell+dx, y=by*cell+dy, idx=(y*S+x)*4;
+              for(let dy=0;dy<cblk;dy++) for(let dx=0;dx<cblk;dx++){
+                const x=Math.floor(bx*cblk+dx), y=Math.floor(by*cblk+dy), idx=(y*S+x)*4;
                 r+=data[idx]; g+=data[idx+1]; b+=data[idx+2]; n++;
               }
               color.push(r/n,g/n,b/n);
             }
-            resolve({a:aHash,d:dHash,c:color});
+
+            // hue histogram — 16 bins, overall palette regardless of layout
+            const HB=16, hist=new Array(HB).fill(0);
+            let total=0;
+            for(let i=0;i<S*S;i++){
+              const r=data[i*4]/255, g=data[i*4+1]/255, b=data[i*4+2]/255;
+              const mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn;
+              if(d<0.03) continue; // near-greyscale pixel — skip, doesn't carry hue info
+              let h;
+              if(mx===r) h=((g-b)/d)%6;
+              else if(mx===g) h=(b-r)/d+2;
+              else h=(r-g)/d+4;
+              h=(h*60+360)%360;
+              hist[Math.floor(h/(360/HB))%HB]++;
+              total++;
+            }
+            const hue = total>0 ? hist.map(v=>v/total) : hist;
+
+            resolve({a:aHash, d:dHash, c:color, h:hue});
           }catch(e){ resolve(null); }
         };
         img.onerror=()=>resolve(null);
@@ -1063,22 +1100,29 @@
     let sum=0; for(let i=0;i<c1.length;i++){ const diff=c1[i]-c2[i]; sum+=diff*diff; }
     return Math.sqrt(sum/c1.length);
   }
+  function histDist(h1,h2){
+    if(!h1||!h2||h1.length!==h2.length) return 1;
+    let sum=0; for(let i=0;i<h1.length;i++){ const diff=h1[i]-h2[i]; sum+=diff*diff; }
+    return Math.sqrt(sum);
+  }
   function sigDistance(s1,s2){
     if(!s1||!s2) return Infinity;
-    const da=hamming(s1.a,s2.a), dd=hamming(s1.d,s2.d), dc=colorDist(s1.c,s2.c)/255*64;
-    return da*0.8+dd*1.4+dc*1.6;
+    const da=hamming(s1.a,s2.a);                 // 0..~100
+    const dd=hamming(s1.d,s2.d);                 // 0..~110
+    const dc=colorDist(s1.c,s2.c)/255*100;        // scaled to comparable range
+    const dh=(s1.h&&s2.h) ? histDist(s1.h,s2.h)*60 : 30; // scaled palette distance
+    return da*0.7 + dd*1.1 + dc*1.3 + dh*1.0;
   }
   async function ensureSig(rec){
-    if(rec.kind==="video") return null;
     if(rec.sig) return rec.sig;
-    const thumbUrl=await ensureThumbUrl(rec);
+    const thumbUrl=await ensureThumbUrl(rec); // works for videos too — off their poster frame
     if(!thumbUrl) return null;
     const sig=await computeSignature(thumbUrl);
     if(sig){ rec.sig=sig; try{ await dbPut(stripForSave({...rec,sig})); }catch(e){} }
     return sig;
   }
   async function sigBacklogPass(){
-    const todo=images.filter(i=>i.kind!=="video" && !i.sig);
+    const todo=images.filter(i=>!i.sig);
     for(const rec of todo){
       await ensureSig(rec);
       await new Promise(r=>setTimeout(r,20));
@@ -1134,6 +1178,13 @@
     img.alt=item.name; img.loading="lazy";
     if(item.thumbUrl) img.src=item.thumbUrl; // already cached from the main grid
     p.appendChild(img);
+    if(item.kind==="video"){
+      const vb=document.createElement("div");
+      vb.className="video-badge";
+      vb.style.cssText="width:22px;height:22px;";
+      vb.innerHTML=`<svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7-11-7z" fill="#fff"/></svg>`;
+      p.appendChild(vb);
+    }
     p.addEventListener("click", ()=> openDetail(item.id));
     if(!item.thumbUrl) getSimLazyObserver().observe(p);
     getSimFullPrefetchObserver().observe(p);
@@ -1167,12 +1218,13 @@
     if(simRenderedCount<simCurrentList.length) ensureSimSentinel();
   }
   function getSimilar(rec){
-    if(!rec || rec.kind==="video" || !rec.sig) return [];
-    const pool=baseList().filter(i=>i.id!==rec.id && i.kind!=="video" && i.sig);
+    if(!rec || !rec.sig) return [];
+    const pool=baseList().filter(i=>i.id!==rec.id && i.sig);
     const scored=pool.map(i=>{
       let score=sigDistance(rec.sig, i.sig);
       if(rec.albumId && i.albumId===rec.albumId) score-=8;
       if(rec.fav && i.fav) score-=2;
+      if(rec.kind===i.kind) score-=1; // slight nudge toward same media type
       return {item:i, score};
     });
     scored.sort((a,b)=>a.score-b.score);
@@ -1183,15 +1235,15 @@
     const wrap=document.getElementById("similarGrid");
     const section=document.getElementById("similarSection");
     removeSimSentinel();
-    if(!rec || rec.kind==="video"){ section.style.display="none"; return; }
+    if(!rec){ section.style.display="none"; return; }
     if(!rec.sig){
-      wrap.innerHTML=`<div class="similar-empty">جاري تحليل الصور…</div>`;
+      wrap.innerHTML=`<div class="similar-empty">جاري تحليل الملفات…</div>`;
       section.style.display="block";
       return;
     }
     const list=getSimilar(rec);
     if(!list.length){
-      wrap.innerHTML=`<div class="similar-empty">ما فيه صور ثانية بعد — ارفع أكثر</div>`;
+      wrap.innerHTML=`<div class="similar-empty">ما فيه ملفات ثانية بعد — ارفع أكثر</div>`;
       section.style.display="block";
       return;
     }
@@ -1390,6 +1442,7 @@
   function pinElFor(id){ return grid.querySelector(`.pin[data-id="${id}"]`); }
   function stillMatchesCurrentFilter(rec){
     if((currentFilter==="fav"||currentView==="fav") && !rec.fav) return false;
+    if(currentFilter==="video" && rec.kind!=="video") return false;
     if(currentAlbumId && rec.albumId!==currentAlbumId) return false;
     if(searchTerm.trim() && !rec.name.toLowerCase().includes(searchTerm.trim().toLowerCase())) return false;
     return true;
@@ -1481,13 +1534,39 @@
   }
   function confirmDelete(id){ removeImageSoft(id); }
 
+  // download: on iOS Safari (and several in-app/embedded browsers) a plain
+  // <a download> click on a blob: URL silently opens the file instead of
+  // actually saving it — the share sheet's "Save Image/Video" is the one
+  // mechanism that reliably lands the file on the device across browsers,
+  // so we prefer it when files-sharing is supported and fall back to the
+  // classic anchor method (which works fine on desktop and most Android
+  // browsers) everywhere else.
+  const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+  function anchorDownload(url, name){
+    try{
+      const a=document.createElement("a");
+      a.href=url; a.download=name||"file"; a.rel="noopener";
+      document.body.appendChild(a); a.click(); a.remove();
+    }catch(e){
+      try{ window.open(url, "_blank"); }catch(e2){}
+    }
+  }
   async function downloadImage(rec){
     const blob=await ensureFullBlob(rec);
-    if(!blob){ toast("تعذّر تحميل الصورة"); return; }
+    if(!blob){ toast("تعذّر تحميل الملف"); return; }
     const url=rec.fullUrl || URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.href=url; a.download=rec.name||"image.jpg";
-    document.body.appendChild(a); a.click(); a.remove();
+    if(isIOSDevice && navigator.canShare){
+      try{
+        const file=new File([blob], rec.name||"file", {type: blob.type||"application/octet-stream"});
+        if(navigator.canShare({files:[file]})){
+          await navigator.share({files:[file], title:rec.name});
+          return;
+        }
+      }catch(e){
+        if(e && e.name==="AbortError") return; // user closed the sheet — don't also open a tab
+      }
+    }
+    anchorDownload(url, rec.name||"file");
   }
   async function shareImage(rec){
     try{
@@ -1499,7 +1578,9 @@
           return;
         }
       }
-    }catch(e){ /* fall through */ }
+    }catch(e){
+      if(e && e.name==="AbortError") return;
+    }
     await downloadImage(rec);
     toast("تم التحميل (المشاركة المباشرة غير مدعومة بهالمتصفح)");
   }
@@ -1523,9 +1604,20 @@
     }
     const content=await zip.generateAsync({type:"blob"});
     const url=URL.createObjectURL(content);
-    const a=document.createElement("a");
-    a.href=url; a.download=filename||"lamha-photos.zip";
-    document.body.appendChild(a); a.click(); a.remove();
+    const zipName=filename||"lamha-photos.zip";
+    if(isIOSDevice && navigator.canShare){
+      try{
+        const file=new File([content], zipName, {type:"application/zip"});
+        if(navigator.canShare({files:[file]})){
+          await navigator.share({files:[file], title:zipName});
+          setTimeout(()=>URL.revokeObjectURL(url), 4000);
+          return;
+        }
+      }catch(e){
+        if(e && e.name==="AbortError"){ setTimeout(()=>URL.revokeObjectURL(url), 4000); return; }
+      }
+    }
+    anchorDownload(url, zipName);
     setTimeout(()=>URL.revokeObjectURL(url), 4000);
     toast("تم تحميل الملف المضغوط");
   }
@@ -1545,6 +1637,45 @@
     }catch(e){ return file.size+"_"+file.name; }
   }
   const knownFingerprints=new Set();
+
+  // Batched writer: computing thumbnails/dims (CPU work) happens with high
+  // concurrency, but each processed file used to open its OWN IndexedDB
+  // transaction immediately — with many files in flight at once those
+  // transactions queue up and serialize against each other, which is the
+  // real cost that made large batches feel slow no matter how much CPU
+  // concurrency was thrown at it. Now finished files are queued and
+  // flushed together in one transaction every ~200ms (or once ~16 are
+  // ready), so a batch of hundreds of files costs a handful of
+  // transactions instead of hundreds.
+  let writeQueue=[];
+  let writeFlushTimer=null;
+  function queueWrite(rec, blob, thumbBlob){
+    // resolves only once actually committed; stores a reference to the live
+    // record (not a frozen snapshot) and writes with put() (upsert) so a
+    // fast favorite/rename right after upload — which does its own dbPut on
+    // this same id — can never race ahead of or get clobbered by this insert;
+    // whichever runs, both read the same up-to-date object.
+    return new Promise((resolve,reject)=>{
+      writeQueue.push({rec, blob, thumbBlob, resolve, reject});
+      if(writeQueue.length>=16) flushWriteQueue();
+      else if(!writeFlushTimer) writeFlushTimer=setTimeout(flushWriteQueue, 200);
+    });
+  }
+  function flushWriteQueue(){
+    if(writeFlushTimer){ clearTimeout(writeFlushTimer); writeFlushTimer=null; }
+    if(!writeQueue.length) return Promise.resolve();
+    const batch=writeQueue.splice(0, writeQueue.length);
+    return new Promise((res,rej)=>{
+      const t=db.transaction([STORE,BLOB_STORE,THUMB_STORE],"readwrite");
+      batch.forEach(item=>{
+        t.objectStore(STORE).put(stripForSave(item.rec));
+        t.objectStore(BLOB_STORE).put({id:item.rec.id, blob:item.blob});
+        if(item.thumbBlob) t.objectStore(THUMB_STORE).put({id:item.rec.id, blob:item.thumbBlob});
+      });
+      t.oncomplete=()=>{ batch.forEach(item=>item.resolve()); res(); };
+      t.onerror=()=>{ batch.forEach(item=>item.reject(t.error)); rej(t.error); };
+    });
+  }
 
   async function processOneFile(file){
     const fp=await fastFingerprint(file);
@@ -1566,11 +1697,11 @@
       kind, date:Date.now(), fav:false, size:file.size, fingerprint:fp,
       width:dims.w||null, height:dims.h||null, duration:dims.duration||null
     };
-    await dbAddFull(meta, file, thumbBlob);
     const withUrl={...meta};
     if(thumbBlob) withUrl.thumbUrl=URL.createObjectURL(thumbBlob);
-    images.unshift(withUrl);
+    images.unshift(withUrl); // optimistic — visible in the grid immediately, write happens right after
     if(kind==="image") ensureSig(withUrl).then(()=>{ if(detailId) renderSimilar(detailId); });
+    await queueWrite(withUrl, file, thumbBlob);
     return withUrl;
   }
   function handleFiles(fileList){
@@ -1580,7 +1711,7 @@
     let done=0, failed=0, dupes=0;
     progressWrap.classList.add("show"); progressFill.style.width="1%";
     toast(total>1 ? `جاري رفع ${total} ملف — يترفعون وحدة وحدة بالخلفية…` : "جاري رفع الملف…");
-    const CONCURRENCY=8;
+    const CONCURRENCY=12;
     let idx=0;
     function next(){
       if(idx>=files.length) return Promise.resolve();
@@ -1591,13 +1722,13 @@
         .then(()=>{
           done++;
           progressFill.style.width=Math.round((done/total)*100)+"%";
-          if(done % 6===0 || done===total) renderGrid();
+          if(done % 10===0 || done===total) renderGrid();
         })
         .then(next);
     }
     const runners=[];
     for(let k=0;k<CONCURRENCY;k++) runners.push(next());
-    Promise.all(runners).then(()=>{
+    Promise.all(runners).then(()=> flushWriteQueue()).then(()=>{
       renderGrid();
       setTimeout(()=>{ progressWrap.classList.remove("show"); progressFill.style.width="0%"; }, 400);
       const added=done-failed-dupes;
@@ -1748,7 +1879,7 @@
       const html=await fetchHtml(url);
       const candidates=extractMediaFromHtml(html, url);
       if(!candidates.length){
-        line.textContent="✗ "+url+" — ما لقيت صور أو فيديوهات بهالصفحة";
+        line.textContent="✗ "+url+" — وصلت الصفحة، بس ما لقيت صور/فيديو بكودها المصدري (غالبًا الموقع يحمّلها عن طريق جافاسكربت بعد التحميل — هذا النوع ما نقدر نوصله لأنه يقرأ الكود الخام بس، بدون تشغيل جافاسكربت الموقع)";
         btn.disabled=false; btn.textContent="بحث";
         return;
       }
@@ -1759,7 +1890,7 @@
       document.getElementById("importTitle").textContent=`لقيت ${candidates.length} — اختار وشيل اللي ما تريده`;
       renderImportResults();
     }catch(e){
-      line.textContent="✗ "+url+" — تعذّر الوصول لهالموقع حتى عبر الوسيط";
+      line.textContent="✗ "+url+" — تعذّر الوصول لهالموقع حتى عبر الوسيط (الموقع يمنع القراءة من متصفح خارجي بشكل كامل)";
     }
     btn.disabled=false; btn.textContent="بحث";
   }
@@ -1875,7 +2006,12 @@
     }
 
     detailName.textContent=rec.name;
-    detailDate.textContent=fmtDate(rec.date)+(rec.viewCount?" · شوهدت "+rec.viewCount+" مرة":"");
+    let infoBits=[fmtDate(rec.date)];
+    if(rec.width && rec.height) infoBits.push(rec.width+"×"+rec.height);
+    if(rec.size) infoBits.push(fmtSize(rec.size));
+    if(rec.kind==="video" && rec.duration) infoBits.push(fmtDuration(rec.duration));
+    if(rec.viewCount) infoBits.push("شوهدت "+rec.viewCount+" مرة");
+    detailDate.textContent=infoBits.join(" · ");
     detailAvatar.textContent=(rec.name||"ص").trim().charAt(0).toUpperCase();
     syncDetailIfOpen(id);
     detail.classList.add("open");
@@ -1886,12 +2022,10 @@
     rec.lastViewed=Date.now();
     dbPut(stripForSave(rec)).catch(()=>{});
 
-    if(rec.kind==="video"){
-      document.getElementById("similarSection").style.display="none";
-    }else if(rec.sig){
+    if(rec.sig){
       renderSimilar(id);
     }else{
-      document.getElementById("similarGrid").innerHTML=`<div class="similar-empty">جاري تحليل الصور…</div>`;
+      document.getElementById("similarGrid").innerHTML=`<div class="similar-empty">جاري تحليل الملفات…</div>`;
       document.getElementById("similarSection").style.display="block";
       ensureSig(rec).then(()=>{ if(detailId===id) renderSimilar(id); });
     }
