@@ -408,6 +408,61 @@
   /* ================= LAZY LOADING / PERF / VIDEO ================= */
   .pin-ph{ width:100%; background:linear-gradient(100deg,#121212 30%,#1e1e1e 50%,#121212 70%); background-size:200% 100%; animation:shine 1.3s infinite; display:block; }
   #gridSentinel{ height:1px; break-inside:avoid; }
+
+  /* ================= AI PROGRESS ================= */
+  .ai-progress-wrap{ padding:4px 16px 12px; }
+  .ai-progress-bg{ height:5px; border-radius:3px; background:var(--surface3); overflow:hidden; }
+  .ai-progress-fill{ height:100%; background:var(--red); width:0%; transition:width .2s ease; }
+  .ai-progress-label{ font-size:11px; color:var(--ink-dim); margin-top:6px; }
+
+  /* ================= SUGGEST NAME ================= */
+  .suggest-names-list{ padding:4px 16px 8px; display:flex; flex-direction:column; gap:8px; }
+  .suggest-name-chip{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--surface3); border:none; border-radius:12px; padding:13px 16px;
+    color:var(--ink); font-family:'IBM Plex Sans Arabic'; font-size:14px; cursor:pointer; text-align:right;
+  }
+  .suggest-name-chip .pct{ color:var(--ink-dim); font-size:12px; flex-shrink:0; }
+  .suggest-name-chip .check-circle{
+    width:26px; height:26px; border-radius:50%; background:var(--red); flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* ================= DUPLICATE FINDER ================= */
+  .dup-view{
+    position:fixed; inset:0; background:#000; z-index:65;
+    transform:translateY(100%); transition:transform .3s cubic-bezier(.2,.8,.2,1);
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
+  }
+  .dup-view.open{ transform:translateY(0); }
+  .dup-title{ font-family:'Cairo'; font-weight:800; font-size:15px; }
+  .dup-body{ padding:10px 16px 40px; }
+  .dup-mode-row{ display:flex; gap:8px; margin-bottom:10px; }
+  .dup-note{ font-size:12px; color:var(--ink-dim); line-height:1.7; padding:6px 2px; }
+  #dupCompareInput{ display:none; }
+  .dup-group{
+    background:var(--surface2); border-radius:16px; padding:12px; margin-bottom:14px;
+  }
+  .dup-group-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .dup-group-head .lbl{ font-family:'Cairo'; font-weight:700; font-size:13px; color:var(--ink-dim); }
+  .dup-group-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(84px,1fr)); gap:8px; }
+  .dup-item{
+    position:relative; border-radius:10px; overflow:hidden; cursor:pointer;
+    border:2px solid transparent;
+  }
+  .dup-item.keep{ border-color:var(--green); }
+  .dup-item.marked{ border-color:var(--red); }
+  .dup-item img{ width:100%; display:block; aspect-ratio:1/1; object-fit:cover; }
+  .dup-item .dup-tag{
+    position:absolute; bottom:3px; right:3px; left:3px; text-align:center; font-size:10px;
+    background:#000000b0; color:#fff; border-radius:6px; padding:2px 0;
+  }
+  .dup-group-actions{ display:flex; gap:8px; margin-top:10px; }
+  .dup-group-actions button{
+    flex:1; padding:9px; border-radius:10px; border:none; font-family:'Cairo'; font-weight:700; font-size:12.5px; cursor:pointer;
+  }
+  .dup-group-actions .keep-best{ background:var(--surface3); color:var(--ink); }
+  .dup-group-actions .delete-marked{ background:#3a1414; color:#ff6a5c; }
   .pin .video-badge{
     position:absolute; top:8px; left:8px; width:28px; height:28px; border-radius:50%;
     background:#00000090; backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center;
@@ -525,6 +580,22 @@
     </div>
 
     <div class="settings-group">
+      <div class="settings-title">الذكاء الاصطناعي (تجريبي)</div>
+      <div class="settings-row">
+        <div class="label">تحليل المكتبة بالذكاء الاصطناعي<small id="aiStatusLabel">يشتغل بالكامل بمتصفحك، ما يرسل أي صورة لأي سيرفر</small></div>
+        <button class="row-action-btn" id="aiRunBtn">تشغيل</button>
+      </div>
+      <div class="ai-progress-wrap" id="aiProgressWrap" style="display:none;">
+        <div class="ai-progress-bg"><div class="ai-progress-fill" id="aiProgressFill"></div></div>
+        <div class="ai-progress-label" id="aiProgressLabel"></div>
+      </div>
+      <div class="settings-row">
+        <div class="label">عثور على المكرّرات<small>يقارن الصور بالذكاء الاصطناعي، مو بس بالاسم</small></div>
+        <button class="row-action-btn" id="dupFinderBtn">فحص</button>
+      </div>
+    </div>
+
+    <div class="settings-group">
       <div class="settings-title">إدارة</div>
       <div class="settings-row">
         <div class="label">استيراد من رابط<small>اسحب صور مباشرة من رابط موقع</small></div>
@@ -628,6 +699,10 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 20l4.2-.9L19.5 7.8a1.8 1.8 0 000-2.5l-1.3-1.3a1.8 1.8 0 00-2.5 0L4.9 15.3 4 20z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
       إعادة تسمية
     </button>
+    <button class="menu-item" id="menuSuggestName">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.8 4.9L19 9.5l-4.2 3.1L16.2 18 12 15l-4.2 3 1.4-5.4L5 9.5l5.2-1.6L12 3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      اقترح اسم (AI)
+    </button>
     <button class="menu-item" id="menuMove">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
       نقل لمجموعة
@@ -647,6 +722,16 @@
     <div class="rename-actions">
       <button class="cancel" id="renameCancel">إلغاء</button>
       <button class="confirm" id="renameConfirm">حفظ</button>
+    </div>
+  </div>
+
+  <div class="menu-card" id="menuCardSuggestName" style="display:none;">
+    <div class="menu-title">اقتراحات اسم — اضغط الصح على اللي يعجبك</div>
+    <div class="suggest-names-list" id="suggestNamesList">
+      <div class="similar-empty" id="suggestNamesLoading">جاري تحليل الصورة بالذكاء الاصطناعي…</div>
+    </div>
+    <div class="rename-actions">
+      <button class="cancel" id="suggestNameCancel">إغلاق</button>
     </div>
   </div>
 
@@ -675,7 +760,7 @@
         <input type="text" id="importUrlInput" placeholder="رابط صفحة، أو رابط صورة/فيديو مباشر">
       </div>
       <div class="import-note">
-        يشتغل زين مع مواقع تعرض الصور مباشرة بكود HTML. مواقع فيها حماية، أو مواقع حديثة تحمّل صورها عن طريق جافاسكربت بعد فتح الصفحة، ممكن ما تنلقى فيها أي صورة — هذا قيد تقني بالمتصفح نفسه (قراءة كود بدون تشغيل جافاسكربت الموقع)، ماكو طريقة مضمونة تتخطاه من داخل صفحة ويب عادية.
+        يشتغل زين مع مواقع تعرض الصور مباشرة بكود HTML. مواقع فيها حماية، أو مواقع حديثة تحمّل صورها عن طريق جافاسكربت بعد فتح الصفحة، ممكن ما تنلقى فيها أي صورة — هذا قيد تقني بالمتصفح نفسه (قراءة كود بدون تشغيل جافاسكربت الموقع)، ماكو طريقة مضمونة تتخطاه من داخل صفحة ويب عادية. منصات فيديو كبيرة (يوتيوب وأشباهها) ما مدعومة عمدًا — تنزيل الفيديو منها يخالف شروط استخدامها.
       </div>
       <div class="import-log" id="importLog" style="display:none;"></div>
       <div class="rename-actions">
@@ -696,6 +781,35 @@
         <button class="confirm" id="importDownloadSelectedBtn">تحميل المحدد</button>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="dup-view" id="dupView">
+  <div class="detail-topbar">
+    <button class="round-btn" id="dupBack">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="dup-title">عثور على المكرّرات</div>
+    <div style="width:38px;"></div>
+  </div>
+  <div class="dup-body" id="dupBody">
+    <div class="dup-intro">
+      <div class="dup-mode-row">
+        <button class="chip active" id="dupModeLibrary">فحص كل مكتبتي</button>
+        <button class="chip" id="dupModeUpload">قارن صورة برفعتها</button>
+      </div>
+      <div id="dupUploadWrap" style="display:none; padding:10px 4px;">
+        <input type="file" id="dupCompareInput" accept="image/*" multiple>
+        <button class="row-action-btn" id="dupCompareBtn">اختار صور للمقارنة</button>
+      </div>
+      <div class="dup-note">يحسب بصمة بصرية بالذكاء الاصطناعي لكل صورة ويقارنها ببعض محليًا بمتصفحك — ما ترفع أي صورة لأي سيرفر.</div>
+      <button class="row-action-btn" id="dupScanBtn" style="margin-top:6px;">ابدأ الفحص</button>
+    </div>
+    <div class="ai-progress-wrap" id="dupProgressWrap" style="display:none;">
+      <div class="ai-progress-bg"><div class="ai-progress-fill" id="dupProgressFill"></div></div>
+      <div class="ai-progress-label" id="dupProgressLabel"></div>
+    </div>
+    <div id="dupResults"></div>
   </div>
 </div>
 
@@ -1121,14 +1235,355 @@
     if(sig){ rec.sig=sig; try{ await dbPut(stripForSave({...rec,sig})); }catch(e){} }
     return sig;
   }
+  // idle-scheduled: backs off automatically while you're actively scrolling/
+  // tapping instead of competing with the UI thread on a fixed timer
+  function idleTask(fn){
+    if(window.requestIdleCallback){
+      return new Promise(resolve=>{
+        requestIdleCallback(()=>{ Promise.resolve(fn()).then(resolve); }, {timeout:2000});
+      });
+    }
+    return new Promise(resolve=>{ setTimeout(()=>{ Promise.resolve(fn()).then(resolve); }, 30); });
+  }
   async function sigBacklogPass(){
     const todo=images.filter(i=>!i.sig);
-    for(const rec of todo){
-      await ensureSig(rec);
-      await new Promise(r=>setTimeout(r,20));
-    }
+    for(const rec of todo){ await idleTask(()=>ensureSig(rec)); }
     if(detailId){ renderSimilar(detailId); }
   }
+  // proactively (and gently) fills in thumbnails for older items that predate
+  // proper thumbnailing, so a specific old photo never has to pay the
+  // "generate it right now" cost the moment you happen to scroll to it
+  async function thumbBackfillPass(){
+    const todo=images.filter(i=>!i.thumbUrl);
+    for(const rec of todo){ await idleTask(()=>ensureThumbUrl(rec)); }
+  }
+
+  // ============================================================
+  // AI (TensorFlow.js + MobileNet) — real client-side model, loaded lazily
+  // from a CDN only the first time any AI feature is actually used (never on
+  // page load), and runs fully in the browser: no photo is ever sent
+  // anywhere, no API key, no server. Two things it's used for:
+  //  - embeddings → much stronger "similar/duplicate" matching than raw
+  //    pixel hashing, since it understands visual content, not just color
+  //  - classification → generic object/scene labels as name suggestions
+  // This is deliberately opt-in / manual only (the "تشغيل" button, the
+  // duplicate finder, "اقترح اسم"). It never runs automatically across the
+  // library, so normal browsing speed is never affected by it existing.
+  // ============================================================
+  let aiModelPromise=null;
+  function loadAIModel(){
+    if(aiModelPromise) return aiModelPromise;
+    aiModelPromise=new Promise((resolve,reject)=>{
+      const s1=document.createElement("script");
+      s1.src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js";
+      s1.onload=()=>{
+        const s2=document.createElement("script");
+        s2.src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js";
+        s2.onload=async ()=>{
+          try{ resolve(await mobilenet.load({version:1, alpha:0.25})); }
+          catch(e){ reject(e); }
+        };
+        s2.onerror=()=>reject(new Error("MOBILENET_LOAD_FAIL"));
+        document.head.appendChild(s2);
+      };
+      s1.onerror=()=>reject(new Error("TFJS_LOAD_FAIL"));
+      document.head.appendChild(s1);
+    });
+    return aiModelPromise;
+  }
+  function loadImgEl(url){
+    return new Promise((resolve,reject)=>{
+      const img=new Image();
+      img.onload=()=>resolve(img);
+      img.onerror=()=>reject(new Error("IMG_LOAD_FAIL"));
+      img.src=url;
+    });
+  }
+  async function computeAIEmbedding(url){
+    try{
+      const model=await loadAIModel();
+      const img=await loadImgEl(url);
+      const t=model.infer(img, true);
+      const data=await t.data();
+      t.dispose();
+      return Array.from(data);
+    }catch(e){ console.error(e); return null; }
+  }
+  async function classifyImage(url){
+    try{
+      const model=await loadAIModel();
+      const img=await loadImgEl(url);
+      return await model.classify(img, 3);
+    }catch(e){ console.error(e); return null; }
+  }
+  function cosineSim(a,b){
+    if(!a||!b||a.length!==b.length) return -1;
+    let dot=0,na=0,nb=0;
+    for(let i=0;i<a.length;i++){ dot+=a[i]*b[i]; na+=a[i]*a[i]; nb+=b[i]*b[i]; }
+    if(na===0||nb===0) return -1;
+    return dot/(Math.sqrt(na)*Math.sqrt(nb));
+  }
+  function humanizeLabel(className){
+    return (className.split(",")[0]||className).trim().replace(/_/g," ");
+  }
+
+  let aiRunning=false;
+  async function runAIOnLibrary(){
+    if(aiRunning) return;
+    aiRunning=true;
+    const btn=document.getElementById("aiRunBtn");
+    const wrap=document.getElementById("aiProgressWrap");
+    const fill=document.getElementById("aiProgressFill");
+    const label=document.getElementById("aiProgressLabel");
+    btn.disabled=true; btn.textContent="جاري تحميل النموذج…";
+    try{ await loadAIModel(); }
+    catch(e){
+      toast("تعذّر تحميل نموذج الذكاء الاصطناعي — يحتاج اتصال إنترنت أول مرة بس (بعدها يشتغل محليًا)");
+      btn.disabled=false; btn.textContent="تشغيل"; aiRunning=false;
+      return;
+    }
+    const todo=baseList().filter(i=>!i.aiEmb);
+    if(!todo.length){
+      toast("كل مكتبتك محلّلة أصلاً");
+      btn.disabled=false; btn.textContent="تشغيل"; aiRunning=false;
+      return;
+    }
+    btn.textContent="جاري التحليل…";
+    wrap.style.display="block";
+    let done=0;
+    for(const rec of todo){
+      await idleTask(async ()=>{
+        try{
+          const url=await ensureThumbUrl(rec);
+          if(url){ const emb=await computeAIEmbedding(url); if(emb){ rec.aiEmb=emb; await dbPut(stripForSave(rec)); } }
+        }catch(e){ /* skip this one, keep going */ }
+      });
+      done++;
+      fill.style.width=Math.round(done/todo.length*100)+"%";
+      label.textContent=`${done} من ${todo.length}`;
+    }
+    toast(`تم تحليل ${done} ملف بالذكاء الاصطناعي`);
+    btn.disabled=false; btn.textContent="تشغيل"; wrap.style.display="none";
+    aiRunning=false;
+    if(detailId) renderSimilar(detailId);
+  }
+  document.getElementById("aiRunBtn").addEventListener("click", runAIOnLibrary);
+
+  document.getElementById("menuSuggestName").addEventListener("click", async ()=>{
+    const id=menuTargetId;
+    const rec=images.find(i=>i.id===id);
+    if(!rec) return;
+    hideAllMenuCards();
+    menuCardSuggestName.style.display="block";
+    menuSheet.classList.add("open");
+    const list=document.getElementById("suggestNamesList");
+    list.innerHTML=`<div class="similar-empty">جاري تحليل الصورة بالذكاء الاصطناعي…</div>`;
+    try{
+      const url = rec.fullUrl || await ensureThumbUrl(rec);
+      const preds=await classifyImage(url);
+      if(menuTargetId!==id) return; // sheet closed / switched while loading
+      if(!preds || !preds.length){
+        list.innerHTML=`<div class="similar-empty">تعذّر تحليل هالصورة</div>`;
+        return;
+      }
+      list.innerHTML="";
+      preds.forEach(p=>{
+        const label=humanizeLabel(p.className);
+        const chip=document.createElement("button");
+        chip.className="suggest-name-chip";
+        chip.innerHTML=`<span class="check-circle"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span style="flex:1;text-align:center;">${label}</span><span class="pct">${Math.round(p.probability*100)}%</span>`;
+        chip.addEventListener("click", async ()=>{
+          rec.name=label;
+          await dbPut(stripForSave(rec));
+          refreshPinVisual(id);
+          syncDetailIfOpen(id);
+          toast("تم تغيير الاسم");
+          closeMenu();
+        });
+        list.appendChild(chip);
+      });
+      const note=document.createElement("div");
+      note.className="import-note";
+      note.style.padding="8px 2px 0";
+      note.textContent="ملاحظة: الاقتراحات أسامي أشياء عامة بالإنجليزي (النموذج مدرّب على أشياء وحيوانات حقيقية) — دقّتها أقل مع رسوم/أنمي.";
+      list.appendChild(note);
+    }catch(e){
+      list.innerHTML=`<div class="similar-empty">تعذّر تحميل نموذج الذكاء الاصطناعي — يحتاج اتصال إنترنت أول مرة</div>`;
+    }
+  });
+  document.getElementById("suggestNameCancel").addEventListener("click", closeMenu);
+
+  // ---------- Duplicate Finder ----------
+  function clusterBySimilarity(list, threshold){
+    const groups=[]; const used=new Set();
+    for(let i=0;i<list.length;i++){
+      if(used.has(list[i].id)) continue;
+      const group=[list[i]];
+      for(let j=i+1;j<list.length;j++){
+        if(used.has(list[j].id)) continue;
+        if(cosineSim(list[i].aiEmb, list[j].aiEmb)>=threshold){ group.push(list[j]); used.add(list[j].id); }
+      }
+      if(group.length>1){ used.add(list[i].id); groups.push(group); }
+    }
+    return groups;
+  }
+  function makeDupCell(item, tagText, isKeep){
+    const cell=document.createElement("div");
+    cell.className="dup-item"+(isKeep?" keep":"");
+    cell.dataset.id=item.id;
+    const img=document.createElement("img");
+    if(item.thumbUrl) img.src=item.thumbUrl; else ensureThumbUrl(item).then(url=>{ if(url) img.src=url; });
+    cell.appendChild(img);
+    const tag=document.createElement("div");
+    tag.className="dup-tag"; tag.textContent=tagText;
+    cell.appendChild(tag);
+    if(!isKeep || item.isQuery===undefined){
+      cell.addEventListener("click", ()=>{
+        if(item.isQuery) return;
+        cell.classList.toggle("marked");
+        tag.textContent = cell.classList.contains("marked") ? "✓ للحذف" : (isKeep?"الاحتفاظ":tagText);
+      });
+    }
+    return cell;
+  }
+  function renderDupGroups(groups){
+    const wrap=document.getElementById("dupResults");
+    wrap.innerHTML="";
+    if(!groups.length){ wrap.innerHTML=`<div class="similar-empty">ما لقيت صور مكرّرة بمكتبتك</div>`; return; }
+    groups.forEach((group,gi)=>{
+      const gEl=document.createElement("div"); gEl.className="dup-group";
+      const head=document.createElement("div"); head.className="dup-group-head";
+      head.innerHTML=`<div class="lbl">مجموعة ${gi+1} — ${group.length} صور متشابهة</div>`;
+      gEl.appendChild(head);
+      const grid=document.createElement("div"); grid.className="dup-group-grid";
+      group.forEach((item,idx)=> grid.appendChild(makeDupCell(item, idx===0?"الاحتفاظ":"مكرّرة؟", idx===0)));
+      gEl.appendChild(grid);
+      const actions=document.createElement("div"); actions.className="dup-group-actions";
+      const delBtn=document.createElement("button"); delBtn.className="delete-marked"; delBtn.textContent="احذف المحدّدة";
+      delBtn.addEventListener("click", ()=>{
+        const marked=Array.from(grid.querySelectorAll(".dup-item.marked")).map(el=>el.dataset.id);
+        if(!marked.length){ toast("ما حددت شي للحذف"); return; }
+        if(!confirm(`تحذف ${marked.length} صورة؟`)) return;
+        marked.forEach(id=> removeImageSoft(id));
+        gEl.remove();
+      });
+      actions.appendChild(delBtn);
+      gEl.appendChild(actions);
+      wrap.appendChild(gEl);
+    });
+  }
+  function renderDupQueryGroups(groups){
+    const wrap=document.getElementById("dupResults");
+    wrap.innerHTML="";
+    if(!groups.length){ wrap.innerHTML=`<div class="similar-empty">ما لقيت تطابق بمكتبتك</div>`; return; }
+    groups.forEach(g=>{
+      const gEl=document.createElement("div"); gEl.className="dup-group";
+      const head=document.createElement("div"); head.className="dup-group-head";
+      head.innerHTML=`<div class="lbl">${g.query.name} — ${g.matches.length} تطابق بمكتبتك</div>`;
+      gEl.appendChild(head);
+      const grid=document.createElement("div"); grid.className="dup-group-grid";
+      const qCell=makeDupCell(g.query, "اللي رفعتها", true);
+      qCell.querySelector("img").src=g.query.thumbUrl;
+      grid.appendChild(qCell);
+      g.matches.forEach(item=> grid.appendChild(makeDupCell(item, "بمكتبتك", false)));
+      gEl.appendChild(grid);
+      const actions=document.createElement("div"); actions.className="dup-group-actions";
+      const delBtn=document.createElement("button"); delBtn.className="delete-marked"; delBtn.textContent="احذف المحدّدة من مكتبتي";
+      delBtn.addEventListener("click", ()=>{
+        const marked=Array.from(grid.querySelectorAll(".dup-item.marked")).map(el=>el.dataset.id);
+        if(!marked.length){ toast("ما حددت شي"); return; }
+        if(!confirm(`تحذف ${marked.length} صورة؟`)) return;
+        marked.forEach(id=> removeImageSoft(id));
+        gEl.remove();
+      });
+      actions.appendChild(delBtn);
+      gEl.appendChild(actions);
+      wrap.appendChild(gEl);
+    });
+  }
+  let dupMode="library";
+  let dupQueryFiles=[];
+  document.getElementById("dupModeLibrary").addEventListener("click", ()=>{
+    dupMode="library";
+    document.getElementById("dupModeLibrary").classList.add("active");
+    document.getElementById("dupModeUpload").classList.remove("active");
+    document.getElementById("dupUploadWrap").style.display="none";
+  });
+  document.getElementById("dupModeUpload").addEventListener("click", ()=>{
+    dupMode="upload";
+    document.getElementById("dupModeUpload").classList.add("active");
+    document.getElementById("dupModeLibrary").classList.remove("active");
+    document.getElementById("dupUploadWrap").style.display="block";
+  });
+  document.getElementById("dupCompareBtn").addEventListener("click", ()=> document.getElementById("dupCompareInput").click());
+  document.getElementById("dupCompareInput").addEventListener("change", (e)=>{
+    dupQueryFiles=Array.from(e.target.files||[]);
+    toast(dupQueryFiles.length+" صورة جاهزة للمقارنة");
+  });
+  async function runDupScan(){
+    const btn=document.getElementById("dupScanBtn");
+    const wrap=document.getElementById("dupProgressWrap");
+    const fill=document.getElementById("dupProgressFill");
+    const label=document.getElementById("dupProgressLabel");
+    document.getElementById("dupResults").innerHTML="";
+    btn.disabled=true; btn.textContent="جاري التحضير…";
+    try{ await loadAIModel(); }
+    catch(e){
+      toast("تعذّر تحميل نموذج الذكاء الاصطناعي — يحتاج اتصال إنترنت أول مرة");
+      btn.disabled=false; btn.textContent="ابدأ الفحص";
+      return;
+    }
+    const libList=baseList().filter(i=>i.kind!=="video");
+    const todoLib=libList.filter(i=>!i.aiEmb);
+    wrap.style.display="block";
+    let done=0;
+    for(const rec of todoLib){
+      await idleTask(async ()=>{
+        const url=await ensureThumbUrl(rec);
+        if(url){ const emb=await computeAIEmbedding(url); if(emb){ rec.aiEmb=emb; await dbPut(stripForSave(rec)); } }
+      });
+      done++;
+      fill.style.width=Math.round(done/Math.max(1,todoLib.length)*100)+"%";
+      label.textContent=`تحضير المكتبة: ${done} من ${todoLib.length}`;
+    }
+    if(dupMode==="library"){
+      btn.textContent="جاري المقارنة…";
+      const withEmb=libList.filter(i=>i.aiEmb);
+      renderDupGroups(clusterBySimilarity(withEmb, 0.9));
+    }else{
+      if(!dupQueryFiles.length){
+        toast("اختار صور أول"); btn.disabled=false; btn.textContent="ابدأ الفحص"; wrap.style.display="none"; return;
+      }
+      const withEmb=libList.filter(i=>i.aiEmb);
+      const groups=[];
+      for(const file of dupQueryFiles){
+        const qUrl=URL.createObjectURL(file);
+        const qEmb=await computeAIEmbedding(qUrl);
+        if(!qEmb) continue;
+        const matches=withEmb
+          .map(i=>({item:i, sim:cosineSim(qEmb,i.aiEmb)}))
+          .filter(x=>x.sim>=0.88)
+          .sort((a,b)=>b.sim-a.sim)
+          .map(x=>x.item);
+        if(matches.length) groups.push({query:{id:"q_"+uid(), name:file.name, thumbUrl:qUrl, isQuery:true}, matches});
+      }
+      renderDupQueryGroups(groups);
+    }
+    wrap.style.display="none";
+    btn.disabled=false; btn.textContent="ابدأ الفحص";
+  }
+  document.getElementById("dupScanBtn").addEventListener("click", runDupScan);
+  document.getElementById("dupFinderBtn").addEventListener("click", ()=>{
+    document.getElementById("dupResults").innerHTML="";
+    document.getElementById("dupProgressWrap").style.display="none";
+    document.getElementById("dupView").classList.add("open");
+    document.body.style.overflow="hidden";
+  });
+  document.getElementById("dupBack").addEventListener("click", ()=>{
+    document.getElementById("dupView").classList.remove("open");
+    document.body.style.overflow="";
+  });
+
   // similar-grid: chunked + lazy just like the main grid — with an
   // uncapped match list, firing every thumb fetch at once was exactly
   // what froze the detail view on open. Same fix, same pattern.
@@ -1218,15 +1673,24 @@
     if(simRenderedCount<simCurrentList.length) ensureSimSentinel();
   }
   function getSimilar(rec){
-    if(!rec || !rec.sig) return [];
-    const pool=baseList().filter(i=>i.id!==rec.id && i.sig);
+    if(!rec || (!rec.sig && !rec.aiEmb)) return [];
+    const pool=baseList().filter(i=>i.id!==rec.id && (i.sig || i.aiEmb));
     const scored=pool.map(i=>{
-      let score=sigDistance(rec.sig, i.sig);
+      let score;
+      if(rec.aiEmb && i.aiEmb){
+        // AI embeddings understand visual content, not just pixel patterns —
+        // use them whenever both sides have one, far stronger match quality
+        score=(1-cosineSim(rec.aiEmb,i.aiEmb))*100;
+      }else if(rec.sig && i.sig){
+        score=sigDistance(rec.sig, i.sig);
+      }else{
+        return null;
+      }
       if(rec.albumId && i.albumId===rec.albumId) score-=8;
       if(rec.fav && i.fav) score-=2;
       if(rec.kind===i.kind) score-=1; // slight nudge toward same media type
       return {item:i, score};
-    });
+    }).filter(Boolean);
     scored.sort((a,b)=>a.score-b.score);
     return scored.map(s=>s.item);
   }
@@ -1236,7 +1700,7 @@
     const section=document.getElementById("similarSection");
     removeSimSentinel();
     if(!rec){ section.style.display="none"; return; }
-    if(!rec.sig){
+    if(!rec.sig && !rec.aiEmb){
       wrap.innerHTML=`<div class="similar-empty">جاري تحليل الملفات…</div>`;
       section.style.display="block";
       return;
@@ -2022,7 +2486,7 @@
     rec.lastViewed=Date.now();
     dbPut(stripForSave(rec)).catch(()=>{});
 
-    if(rec.sig){
+    if(rec.sig || rec.aiEmb){
       renderSimilar(id);
     }else{
       document.getElementById("similarGrid").innerHTML=`<div class="similar-empty">جاري تحليل الملفات…</div>`;
@@ -2066,6 +2530,7 @@
   const menuCardAlbums=document.getElementById("menuCardAlbums");
   const menuCardNewAlbum=document.getElementById("menuCardNewAlbum");
   const menuCardImport=document.getElementById("menuCardImport");
+  const menuCardSuggestName=document.getElementById("menuCardSuggestName");
   const menuFavLabel=document.getElementById("menuFavLabel");
   const renameInput=document.getElementById("renameInput");
 
@@ -2075,6 +2540,7 @@
     menuCardAlbums.style.display="none";
     menuCardNewAlbum.style.display="none";
     menuCardImport.style.display="none";
+    menuCardSuggestName.style.display="none";
   }
   function openMenu(id){
     menuTargetId=id;
@@ -2374,7 +2840,7 @@
       albums=await dbAllAlbums();
       renderAlbumChips();
       renderGrid();
-      setTimeout(sigBacklogPass, 1200);
+      setTimeout(()=>{ thumbBackfillPass().then(sigBacklogPass); }, 1200);
     }catch(err){
       console.error(err);
       toast("تعذّر فتح قاعدة البيانات المحلية");
