@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   :root{
     --bg:#000000;
@@ -428,41 +427,7 @@
     display:flex; align-items:center; justify-content:center;
   }
 
-  /* ================= DUPLICATE FINDER ================= */
-  .dup-view{
-    position:fixed; inset:0; background:#000; z-index:65;
-    transform:translateY(100%); transition:transform .3s cubic-bezier(.2,.8,.2,1);
-    overflow-y:auto; -webkit-overflow-scrolling:touch;
-  }
-  .dup-view.open{ transform:translateY(0); }
-  .dup-title{ font-family:'Cairo'; font-weight:800; font-size:15px; }
-  .dup-body{ padding:10px 16px 40px; }
-  .dup-mode-row{ display:flex; gap:8px; margin-bottom:10px; }
-  .dup-note{ font-size:12px; color:var(--ink-dim); line-height:1.7; padding:6px 2px; }
-  #dupCompareInput{ display:none; }
-  .dup-group{
-    background:var(--surface2); border-radius:16px; padding:12px; margin-bottom:14px;
-  }
-  .dup-group-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
-  .dup-group-head .lbl{ font-family:'Cairo'; font-weight:700; font-size:13px; color:var(--ink-dim); }
-  .dup-group-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(84px,1fr)); gap:8px; }
-  .dup-item{
-    position:relative; border-radius:10px; overflow:hidden; cursor:pointer;
-    border:2px solid transparent;
-  }
-  .dup-item.keep{ border-color:var(--green); }
-  .dup-item.marked{ border-color:var(--red); }
-  .dup-item img{ width:100%; display:block; aspect-ratio:1/1; object-fit:cover; }
-  .dup-item .dup-tag{
-    position:absolute; bottom:3px; right:3px; left:3px; text-align:center; font-size:10px;
-    background:#000000b0; color:#fff; border-radius:6px; padding:2px 0;
-  }
-  .dup-group-actions{ display:flex; gap:8px; margin-top:10px; }
-  .dup-group-actions button{
-    flex:1; padding:9px; border-radius:10px; border:none; font-family:'Cairo'; font-weight:700; font-size:12.5px; cursor:pointer;
-  }
-  .dup-group-actions .keep-best{ background:var(--surface3); color:var(--ink); }
-  .dup-group-actions .delete-marked{ background:#3a1414; color:#ff6a5c; }
+  
   .pin .video-badge{
     position:absolute; top:8px; left:8px; width:28px; height:28px; border-radius:50%;
     background:#00000090; backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center;
@@ -473,6 +438,20 @@
     background:#00000090; color:#fff; font-size:11px; display:flex; align-items:center;
   }
   .pin.has-album .dur-badge{ bottom:36px; }
+
+  /* ===== v16 ===== */
+  .sr-file, input.sr-file[type=file]{ display:block !important; position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; clip:rect(0,0,0,0); pointer-events:none; }
+  label.menu-item{ cursor:pointer; }
+  #confirmMsg{ font-size:15px; color:var(--ink); padding:18px 18px 6px; line-height:1.8; text-align:center; }
+  .rename-actions .confirm.danger{ background:#c0392b; }
+  .diag-out{ padding:6px 18px 10px; font-size:13px; line-height:2; white-space:pre-wrap; text-align:right; color:var(--ink); }
+  .proxy-row{ display:flex; gap:8px; padding:6px 16px 0; align-items:center; }
+  .proxy-row input{ flex:1; min-width:0; background:var(--surface3); border:1px solid var(--line); color:var(--ink); border-radius:12px; padding:11px 12px; font-size:13px; outline:none; font-family:monospace; }
+  .proxy-status{ padding:6px 18px 4px; font-size:12px; color:var(--ink-dim); min-height:18px; line-height:1.6; }
+  .proxy-status.ok{ color:#2ecc71; }
+  .proxy-status.bad{ color:#ff6a5c; }
+  .import-cell.failed{ opacity:.22; }
+  .import-vid-tile{ height:90px; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--ink-dim); gap:6px; }
 </style>
 </head>
 <body>
@@ -589,10 +568,28 @@
         <div class="ai-progress-bg"><div class="ai-progress-fill" id="aiProgressFill"></div></div>
         <div class="ai-progress-label" id="aiProgressLabel"></div>
       </div>
+      
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-title">الرفع والتخزين</div>
       <div class="settings-row">
-        <div class="label">عثور على المكرّرات<small>يقارن الصور بالذكاء الاصطناعي، مو بس بالاسم</small></div>
-        <button class="row-action-btn" id="dupFinderBtn">فحص</button>
+        <div class="label">منع تكرار الصور عند الرفع<small>يتجاهل الملف إذا نفسه موجود عندك</small></div>
+        <div class="segmented" id="dedupeSeg"><button data-v="1" class="active">شغّال</button><button data-v="0">مطفّي</button></div>
       </div>
+      <div class="settings-row">
+        <div class="label">استيراد ملف ZIP<small>ملف نزّلته من الموقع — يرجّع المجموعات والمفضّلة</small></div>
+        <label class="row-action-btn" for="fileInputZip">استيراد</label>
+      </div>
+      <div class="settings-row">
+        <div class="label">فحص التطبيق<small>يبين إذا التخزين والميزات شغّالة</small></div>
+        <button class="row-action-btn" id="diagBtn">فحص</button>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-title">المجموعات</div>
+      <div id="albumManageList"></div>
     </div>
 
     <div class="settings-group">
@@ -605,7 +602,7 @@
         </button>
       </div>
       <div class="settings-row">
-        <div class="label">تصدير كل الصور<small>تحميل ملف ZIP واحد</small></div>
+        <div class="label">تصدير كل الصور<small>ملف ZIP (يتقسّم لأجزاء إذا المكتبة كبيرة) — تستورده بالتطبيق</small></div>
         <button class="row-action-btn" id="exportAllBtn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3v13m0 0l-4.5-4.5M12 16l4.5-4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           تصدير
@@ -640,7 +637,9 @@
 </nav>
 </div>
 
-<input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.heic,.heif,.mp4,.mov,.webm,.mkv,.3gp,.avi,image/*,video/*" multiple>
+<input type="file" id="fileInputImages" class="sr-file" accept="image/*" multiple>
+<input type="file" id="fileInputVideos" class="sr-file" accept="video/*" multiple>
+<input type="file" id="fileInputZip" class="sr-file" accept="application/zip,application/x-zip-compressed,.zip" multiple>
 
 <!-- Detail (pin) fullscreen view -->
 <div class="detail" id="detail">
@@ -735,6 +734,47 @@
     </div>
   </div>
 
+  <div class="menu-card" id="menuCardAdd" style="display:none;">
+    <div class="menu-title">إضافة إلى المعرض</div>
+    <label class="menu-item" for="fileInputImages">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="10" r="1.7" fill="currentColor"/><path d="M4 18l5-5 4 4 3-3 4 4" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      رفع صور
+    </label>
+    <label class="menu-item" for="fileInputVideos">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M10 9.5v5l4.5-2.5L10 9.5z" fill="currentColor"/></svg>
+      رفع فيديوهات
+    </label>
+    <label class="menu-item" for="fileInputZip">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6V3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M11 6v2m0 2v2m0 2v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      استيراد ملف ZIP
+    </label>
+    <button class="menu-item" id="menuAddFromUrl">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 15l6-6M10 7l1.5-1.5a3 3 0 014.24 4.24L14 11.5M14 9l-1.5 1.5a3 3 0 01-4.24-4.24L9.5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      استيراد من رابط موقع
+    </button>
+  </div>
+
+  <div class="menu-card" id="menuCardConfirm" style="display:none;">
+    <div id="confirmMsg"></div>
+    <div class="rename-actions">
+      <button class="cancel" id="confirmCancel">إلغاء</button>
+      <button class="confirm" id="confirmOk">تأكيد</button>
+    </div>
+  </div>
+
+  <div class="menu-card" id="menuCardAlbumDelete" style="display:none;">
+    <div class="menu-title" id="albumDeleteTitle"></div>
+    <button class="menu-item" id="albumDelKeep">حذف المجموعة فقط — الملفات تبقى</button>
+    <button class="menu-item danger" id="albumDelAll">حذف المجموعة مع كل ملفاتها</button>
+    <div class="rename-actions"><button class="cancel" id="albumDelCancel">إلغاء</button></div>
+  </div>
+
+  <div class="menu-card" id="menuCardDiag" style="display:none;">
+    <div class="menu-title">فحص التطبيق</div>
+    <div class="diag-out" id="diagOut"></div>
+    <div class="rename-actions"><button class="cancel" id="diagClose">إغلاق</button></div>
+  </div>
+
   <div class="menu-card" id="menuCardAlbums" style="display:none;">
     <div class="menu-title">اختر مجموعة</div>
     <div class="album-list" id="albumPickList"></div>
@@ -760,8 +800,13 @@
         <input type="text" id="importUrlInput" placeholder="رابط صفحة، أو رابط صورة/فيديو مباشر">
       </div>
       <div class="import-note">
-        يشتغل زين مع مواقع تعرض الصور مباشرة بكود HTML. مواقع فيها حماية، أو مواقع حديثة تحمّل صورها عن طريق جافاسكربت بعد فتح الصفحة، ممكن ما تنلقى فيها أي صورة — هذا قيد تقني بالمتصفح نفسه (قراءة كود بدون تشغيل جافاسكربت الموقع)، ماكو طريقة مضمونة تتخطاه من داخل صفحة ويب عادية. منصات فيديو كبيرة (يوتيوب وأشباهها) ما مدعومة عمدًا — تنزيل الفيديو منها يخالف شروط استخدامها.
+        الاستيراد كله يمرّ عبر تطبيق البروكسي اللي عندك (داخل الـAPK). افتح تطبيق البروكسي وخليه شغّال، بعدين الصق رابط الموقع — بتشوف كل الصور والفيديوهات اللي بالصفحة وتختار اللي تريده قبل التنزيل.
       </div>
+      <div class="proxy-row">
+        <input type="text" id="proxyAddrInput" placeholder="http://127.0.0.1:8080" dir="ltr">
+        <button class="row-action-btn" id="proxyTestBtn">اختبار</button>
+      </div>
+      <div class="proxy-status" id="proxyStatus"></div>
       <div class="import-log" id="importLog" style="display:none;"></div>
       <div class="rename-actions">
         <button class="cancel" id="importCancel">إغلاق</button>
@@ -781,35 +826,6 @@
         <button class="confirm" id="importDownloadSelectedBtn">تحميل المحدد</button>
       </div>
     </div>
-  </div>
-</div>
-
-<div class="dup-view" id="dupView">
-  <div class="detail-topbar">
-    <button class="round-btn" id="dupBack">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
-    <div class="dup-title">عثور على المكرّرات</div>
-    <div style="width:38px;"></div>
-  </div>
-  <div class="dup-body" id="dupBody">
-    <div class="dup-intro">
-      <div class="dup-mode-row">
-        <button class="chip active" id="dupModeLibrary">فحص كل مكتبتي</button>
-        <button class="chip" id="dupModeUpload">قارن صورة برفعتها</button>
-      </div>
-      <div id="dupUploadWrap" style="display:none; padding:10px 4px;">
-        <input type="file" id="dupCompareInput" accept="image/*" multiple>
-        <button class="row-action-btn" id="dupCompareBtn">اختار صور للمقارنة</button>
-      </div>
-      <div class="dup-note">يحسب بصمة بصرية بالذكاء الاصطناعي لكل صورة ويقارنها ببعض محليًا بمتصفحك — ما ترفع أي صورة لأي سيرفر.</div>
-      <button class="row-action-btn" id="dupScanBtn" style="margin-top:6px;">ابدأ الفحص</button>
-    </div>
-    <div class="ai-progress-wrap" id="dupProgressWrap" style="display:none;">
-      <div class="ai-progress-bg"><div class="ai-progress-fill" id="dupProgressFill"></div></div>
-      <div class="ai-progress-label" id="dupProgressLabel"></div>
-    </div>
-    <div id="dupResults"></div>
   </div>
 </div>
 
@@ -948,7 +964,6 @@
   const grid=document.getElementById("grid");
   const emptyState=document.getElementById("emptyState");
   const profileView=document.getElementById("profileView");
-  const fileInput=document.getElementById("fileInput");
   const toastEl=document.getElementById("toast");
   const progressWrap=document.getElementById("progressWrap");
   const progressFill=document.getElementById("progressFill");
@@ -1001,10 +1016,12 @@
     sec=Math.round(sec);
     return Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0");
   }
-  function stripForSave(rec){
-    const {url, blob, fullUrl, thumbUrl, _blobPromise, _thumbPromise, sig, ...rest}=rec;
-    const out={...rest};
-    if(rec.sig) out.sig=rec.sig;
+    function stripForSave(rec){
+    const out={};
+    for(const k in rec){
+      if(k[0]==="_"||k==="url"||k==="blob"||k==="fullUrl"||k==="thumbUrl") continue;
+      out[k]=rec[k];
+    }
     return out;
   }
 
@@ -1034,77 +1051,109 @@
       }catch(e){ resolve({w:0,h:0,duration:0}); }
     });
   }
-  function generateThumb(file, kind){
-    return new Promise((resolve)=>{
-      const MAX=760;
-      try{
-        if(kind==="video"){
-          const v=document.createElement("video");
-          v.preload="metadata"; v.muted=true; v.playsInline=true;
-          const url=URL.createObjectURL(file);
-          v.onloadeddata=()=>{ try{ v.currentTime=Math.min(0.8,(v.duration||1)/2); }catch(e){ URL.revokeObjectURL(url); resolve(null); } };
-          v.onseeked=()=>{
-            try{
-              const w=v.videoWidth||MAX, h=v.videoHeight||MAX, scale=Math.min(1, MAX/Math.max(w,h));
-              const c=document.createElement("canvas");
-              c.width=Math.max(1,Math.round(w*scale)); c.height=Math.max(1,Math.round(h*scale));
-              c.getContext("2d").drawImage(v,0,0,c.width,c.height);
-              c.toBlob(b=>{ URL.revokeObjectURL(url); resolve(b); }, "image/jpeg", 0.8);
-            }catch(e){ URL.revokeObjectURL(url); resolve(null); }
-          };
-          v.onerror=()=>{ URL.revokeObjectURL(url); resolve(null); };
-          v.src=url;
-        }else{
-          const finish=(w,h,drawSrc)=>{
-            const scale=Math.min(1, MAX/Math.max(w,h));
+    function generateThumb(file, kind, hintW, hintH){
+    const MAX=760;
+    if(kind==="video"){
+      return new Promise(resolve=>{
+        const v=document.createElement("video");
+        v.preload="metadata"; v.muted=true; v.playsInline=true;
+        const url=URL.createObjectURL(file);
+        let settled=false, timer=null;
+        const fin=r=>{
+          if(settled) return; settled=true; clearTimeout(timer);
+          try{ v.removeAttribute("src"); v.load(); }catch(e){}
+          URL.revokeObjectURL(url); resolve(r);
+        };
+        timer=setTimeout(()=>fin(null),15000);
+        v.onloadeddata=()=>{ try{ v.currentTime=Math.min(0.8,(v.duration||1)/2); }catch(e){ fin(null); } };
+        v.onseeked=()=>{
+          try{
+            const w=v.videoWidth||MAX, h=v.videoHeight||MAX, dur=v.duration||0;
+            const sc=Math.min(1,MAX/Math.max(w,h));
             const c=document.createElement("canvas");
-            c.width=Math.max(1,Math.round(w*scale)); c.height=Math.max(1,Math.round(h*scale));
-            c.getContext("2d").drawImage(drawSrc,0,0,c.width,c.height);
-            c.toBlob(b=>resolve(b), "image/jpeg", 0.9);
-          };
-          if(window.createImageBitmap){
-            createImageBitmap(file).then(bmp=>{ finish(bmp.width,bmp.height,bmp); if(bmp.close) bmp.close(); }).catch(()=>resolve(null));
-          }else{
-            const img=new Image();
-            const url=URL.createObjectURL(file);
-            img.onload=()=>{ finish(img.naturalWidth,img.naturalHeight,img); URL.revokeObjectURL(url); };
-            img.onerror=()=>{ URL.revokeObjectURL(url); resolve(null); };
-            img.src=url;
-          }
-        }
-      }catch(e){ resolve(null); }
+            c.width=Math.max(1,Math.round(w*sc)); c.height=Math.max(1,Math.round(h*sc));
+            c.getContext("2d").drawImage(v,0,0,c.width,c.height);
+            const vw=v.videoWidth||0, vh=v.videoHeight||0;
+            c.toBlob(b=>fin(b?{blob:b,w:vw,h:vh,duration:dur}:null),"image/jpeg",0.85);
+          }catch(e){ fin(null); }
+        };
+        v.onerror=()=>fin(null);
+        v.src=url;
+      });
+    }
+    return new Promise(resolve=>{
+      const draw=(src,sw,sh,rw,rh)=>{
+        const sc=Math.min(1,MAX/Math.max(sw,sh));
+        const c=document.createElement("canvas");
+        c.width=Math.max(1,Math.round(sw*sc)); c.height=Math.max(1,Math.round(sh*sc));
+        const ctx=c.getContext("2d"); ctx.imageSmoothingQuality="high";
+        ctx.drawImage(src,0,0,c.width,c.height);
+        c.toBlob(b=>resolve(b?{blob:b,w:rw,h:rh,duration:0}:null),"image/jpeg",0.9);
+      };
+      const viaImg=()=>{
+        const url=URL.createObjectURL(file); const img=new Image();
+        img.onload=()=>{
+          const w=img.naturalWidth,h=img.naturalHeight;
+          if(!w||!h){ URL.revokeObjectURL(url); return resolve(null); }
+          try{ draw(img,w,h,w,h); }catch(e){ resolve(null); }
+          URL.revokeObjectURL(url);
+        };
+        img.onerror=()=>{ URL.revokeObjectURL(url); resolve(null); };
+        img.src=url;
+      };
+      if(!window.createImageBitmap){ viaImg(); return; }
+      // decode straight at thumbnail size when we already know the real dimensions
+      // (much faster + far less memory than decoding a full 12MP photo)
+      const big=hintW&&hintH&&Math.max(hintW,hintH)>MAX*1.5;
+      let p;
+      if(big){
+        const sc=MAX/Math.max(hintW,hintH);
+        p=createImageBitmap(file,{resizeWidth:Math.max(1,Math.round(hintW*sc)),resizeHeight:Math.max(1,Math.round(hintH*sc)),resizeQuality:"medium"}).catch(()=>createImageBitmap(file));
+      }else p=createImageBitmap(file);
+      p.then(bmp=>{
+        const bw=bmp.width,bh=bmp.height;
+        const reduced=big&&bw<=MAX+2&&bh<=MAX+2;
+        draw(bmp,bw,bh,reduced?hintW:bw,reduced?hintH:bh);
+        if(bmp.close) bmp.close();
+      }).catch(viaImg);
     });
   }
-  async function ensureThumbUrl(rec){
+    async function ensureThumbUrl(rec){
     if(rec.thumbUrl) return rec.thumbUrl;
+    if(rec._thumbFailed) return null;
     if(rec._thumbPromise) return rec._thumbPromise;
     rec._thumbPromise=(async()=>{
-      let blob=await dbGetThumb(rec.id);
-      if(!blob){
-        const full=await dbGetBlob(rec.id);
-        if(full){
-          blob=await generateThumb(full, rec.kind||"image");
-          if(blob){ try{ await dbPutThumb(rec.id, blob); }catch(e){} }
-          else blob=full;
-          // videos skip dims capture at upload time — fill it in now, once, lazily
-          if(rec.kind==="video" && !rec.width){
-            const dims=await getMediaDims(full, "video").catch(()=>null);
-            if(dims && dims.w){
-              rec.width=dims.w; rec.height=dims.h; rec.duration=dims.duration||null;
-              try{ await dbPut(stripForSave(rec)); }catch(e){}
-            }
+      try{
+        let blob=await dbGetThumb(rec.id);
+        if(!blob){
+          const full=rec._src || await dbGetBlob(rec.id);
+          if(full){
+            const kind=rec.kind||"image";
+            const lim=(kind==="video")?vidThumbLimit:imgThumbLimit;
+            const res=await lim(()=>generateThumb(full,kind,rec.width,rec.height));
+            if(res && res.blob){
+              blob=res.blob;
+              try{ await dbPutThumb(rec.id, blob); }catch(e){}
+              let changed=false;
+              if((!rec.width||!rec.height) && res.w && res.h){ rec.width=res.w; rec.height=res.h; changed=true; }
+              if(kind==="video" && !rec.duration && res.duration){ rec.duration=res.duration; changed=true; }
+              if(changed) dbPut(stripForSave(rec)).catch(()=>{});
+            }else if(kind==="image"){ blob=full; }
           }
         }
-      }
-      if(blob) rec.thumbUrl=URL.createObjectURL(blob);
+        if(blob) rec.thumbUrl=URL.createObjectURL(blob);
+        else rec._thumbFailed=true;
+      }catch(e){ rec._thumbFailed=true; }
+      rec._thumbPromise=null;
       return rec.thumbUrl||null;
     })();
     return rec._thumbPromise;
   }
-  async function ensureFullBlob(rec){
+    async function ensureFullBlob(rec){
     if(rec.blob) return rec.blob;
+    if(rec._src) return rec._src;
     if(rec._blobPromise) return rec._blobPromise;
-    rec._blobPromise=dbGetBlob(rec.id).then(blob=>{ if(blob) rec.blob=blob; return blob; });
+    rec._blobPromise=dbGetBlob(rec.id).then(blob=>{ if(blob) rec.blob=blob; else rec._blobPromise=null; return blob; });
     return rec._blobPromise;
   }
   async function ensureFullUrl(rec){
@@ -1237,13 +1286,10 @@
   }
   // idle-scheduled: backs off automatically while you're actively scrolling/
   // tapping instead of competing with the UI thread on a fixed timer
-  function idleTask(fn){
-    if(window.requestIdleCallback){
-      return new Promise(resolve=>{
-        requestIdleCallback(()=>{ Promise.resolve(fn()).then(resolve); }, {timeout:2000});
-      });
-    }
-    return new Promise(resolve=>{ setTimeout(()=>{ Promise.resolve(fn()).then(resolve); }, 30); });
+    function idleTask(fn){
+    const run=cb=>{ let p; try{ p=Promise.resolve(fn()); }catch(e){ p=Promise.resolve(); } p.then(cb,cb); };
+    if(window.requestIdleCallback) return new Promise(resolve=>{ requestIdleCallback(()=>run(resolve),{timeout:2000}); });
+    return new Promise(resolve=>{ setTimeout(()=>run(resolve),30); });
   }
   async function sigBacklogPass(){
     const todo=images.filter(i=>!i.sig);
@@ -1253,9 +1299,13 @@
   // proactively (and gently) fills in thumbnails for older items that predate
   // proper thumbnailing, so a specific old photo never has to pay the
   // "generate it right now" cost the moment you happen to scroll to it
-  async function thumbBackfillPass(){
-    const todo=images.filter(i=>!i.thumbUrl);
-    for(const rec of todo){ await idleTask(()=>ensureThumbUrl(rec)); }
+    async function thumbBackfillPass(){
+    const todo=images.filter(i=>!i.thumbUrl && !i._thumbPromise && !i._thumbFailed);
+    for(const rec of todo){
+      if(rec.thumbUrl||rec._thumbPromise||rec._thumbFailed) continue;
+      while(document.hidden) await new Promise(r=>setTimeout(r,2000));
+      await idleTask(()=>ensureThumbUrl(rec));
+    }
   }
 
   // ============================================================
@@ -1412,177 +1462,6 @@
     }
   });
   document.getElementById("suggestNameCancel").addEventListener("click", closeMenu);
-
-  // ---------- Duplicate Finder ----------
-  function clusterBySimilarity(list, threshold){
-    const groups=[]; const used=new Set();
-    for(let i=0;i<list.length;i++){
-      if(used.has(list[i].id)) continue;
-      const group=[list[i]];
-      for(let j=i+1;j<list.length;j++){
-        if(used.has(list[j].id)) continue;
-        if(cosineSim(list[i].aiEmb, list[j].aiEmb)>=threshold){ group.push(list[j]); used.add(list[j].id); }
-      }
-      if(group.length>1){ used.add(list[i].id); groups.push(group); }
-    }
-    return groups;
-  }
-  function makeDupCell(item, tagText, isKeep){
-    const cell=document.createElement("div");
-    cell.className="dup-item"+(isKeep?" keep":"");
-    cell.dataset.id=item.id;
-    const img=document.createElement("img");
-    if(item.thumbUrl) img.src=item.thumbUrl; else ensureThumbUrl(item).then(url=>{ if(url) img.src=url; });
-    cell.appendChild(img);
-    const tag=document.createElement("div");
-    tag.className="dup-tag"; tag.textContent=tagText;
-    cell.appendChild(tag);
-    if(!isKeep || item.isQuery===undefined){
-      cell.addEventListener("click", ()=>{
-        if(item.isQuery) return;
-        cell.classList.toggle("marked");
-        tag.textContent = cell.classList.contains("marked") ? "✓ للحذف" : (isKeep?"الاحتفاظ":tagText);
-      });
-    }
-    return cell;
-  }
-  function renderDupGroups(groups){
-    const wrap=document.getElementById("dupResults");
-    wrap.innerHTML="";
-    if(!groups.length){ wrap.innerHTML=`<div class="similar-empty">ما لقيت صور مكرّرة بمكتبتك</div>`; return; }
-    groups.forEach((group,gi)=>{
-      const gEl=document.createElement("div"); gEl.className="dup-group";
-      const head=document.createElement("div"); head.className="dup-group-head";
-      head.innerHTML=`<div class="lbl">مجموعة ${gi+1} — ${group.length} صور متشابهة</div>`;
-      gEl.appendChild(head);
-      const grid=document.createElement("div"); grid.className="dup-group-grid";
-      group.forEach((item,idx)=> grid.appendChild(makeDupCell(item, idx===0?"الاحتفاظ":"مكرّرة؟", idx===0)));
-      gEl.appendChild(grid);
-      const actions=document.createElement("div"); actions.className="dup-group-actions";
-      const delBtn=document.createElement("button"); delBtn.className="delete-marked"; delBtn.textContent="احذف المحدّدة";
-      delBtn.addEventListener("click", ()=>{
-        const marked=Array.from(grid.querySelectorAll(".dup-item.marked")).map(el=>el.dataset.id);
-        if(!marked.length){ toast("ما حددت شي للحذف"); return; }
-        if(!confirm(`تحذف ${marked.length} صورة؟`)) return;
-        marked.forEach(id=> removeImageSoft(id));
-        gEl.remove();
-      });
-      actions.appendChild(delBtn);
-      gEl.appendChild(actions);
-      wrap.appendChild(gEl);
-    });
-  }
-  function renderDupQueryGroups(groups){
-    const wrap=document.getElementById("dupResults");
-    wrap.innerHTML="";
-    if(!groups.length){ wrap.innerHTML=`<div class="similar-empty">ما لقيت تطابق بمكتبتك</div>`; return; }
-    groups.forEach(g=>{
-      const gEl=document.createElement("div"); gEl.className="dup-group";
-      const head=document.createElement("div"); head.className="dup-group-head";
-      head.innerHTML=`<div class="lbl">${g.query.name} — ${g.matches.length} تطابق بمكتبتك</div>`;
-      gEl.appendChild(head);
-      const grid=document.createElement("div"); grid.className="dup-group-grid";
-      const qCell=makeDupCell(g.query, "اللي رفعتها", true);
-      qCell.querySelector("img").src=g.query.thumbUrl;
-      grid.appendChild(qCell);
-      g.matches.forEach(item=> grid.appendChild(makeDupCell(item, "بمكتبتك", false)));
-      gEl.appendChild(grid);
-      const actions=document.createElement("div"); actions.className="dup-group-actions";
-      const delBtn=document.createElement("button"); delBtn.className="delete-marked"; delBtn.textContent="احذف المحدّدة من مكتبتي";
-      delBtn.addEventListener("click", ()=>{
-        const marked=Array.from(grid.querySelectorAll(".dup-item.marked")).map(el=>el.dataset.id);
-        if(!marked.length){ toast("ما حددت شي"); return; }
-        if(!confirm(`تحذف ${marked.length} صورة؟`)) return;
-        marked.forEach(id=> removeImageSoft(id));
-        gEl.remove();
-      });
-      actions.appendChild(delBtn);
-      gEl.appendChild(actions);
-      wrap.appendChild(gEl);
-    });
-  }
-  let dupMode="library";
-  let dupQueryFiles=[];
-  document.getElementById("dupModeLibrary").addEventListener("click", ()=>{
-    dupMode="library";
-    document.getElementById("dupModeLibrary").classList.add("active");
-    document.getElementById("dupModeUpload").classList.remove("active");
-    document.getElementById("dupUploadWrap").style.display="none";
-  });
-  document.getElementById("dupModeUpload").addEventListener("click", ()=>{
-    dupMode="upload";
-    document.getElementById("dupModeUpload").classList.add("active");
-    document.getElementById("dupModeLibrary").classList.remove("active");
-    document.getElementById("dupUploadWrap").style.display="block";
-  });
-  document.getElementById("dupCompareBtn").addEventListener("click", ()=> document.getElementById("dupCompareInput").click());
-  document.getElementById("dupCompareInput").addEventListener("change", (e)=>{
-    dupQueryFiles=Array.from(e.target.files||[]);
-    toast(dupQueryFiles.length+" صورة جاهزة للمقارنة");
-  });
-  async function runDupScan(){
-    const btn=document.getElementById("dupScanBtn");
-    const wrap=document.getElementById("dupProgressWrap");
-    const fill=document.getElementById("dupProgressFill");
-    const label=document.getElementById("dupProgressLabel");
-    document.getElementById("dupResults").innerHTML="";
-    btn.disabled=true; btn.textContent="جاري التحضير…";
-    try{ await loadAIModel(); }
-    catch(e){
-      toast("تعذّر تحميل نموذج الذكاء الاصطناعي — يحتاج اتصال إنترنت أول مرة");
-      btn.disabled=false; btn.textContent="ابدأ الفحص";
-      return;
-    }
-    const libList=baseList().filter(i=>i.kind!=="video");
-    const todoLib=libList.filter(i=>!i.aiEmb);
-    wrap.style.display="block";
-    let done=0;
-    for(const rec of todoLib){
-      await idleTask(async ()=>{
-        const url=await ensureThumbUrl(rec);
-        if(url){ const emb=await computeAIEmbedding(url); if(emb){ rec.aiEmb=emb; await dbPut(stripForSave(rec)); } }
-      });
-      done++;
-      fill.style.width=Math.round(done/Math.max(1,todoLib.length)*100)+"%";
-      label.textContent=`تحضير المكتبة: ${done} من ${todoLib.length}`;
-    }
-    if(dupMode==="library"){
-      btn.textContent="جاري المقارنة…";
-      const withEmb=libList.filter(i=>i.aiEmb);
-      renderDupGroups(clusterBySimilarity(withEmb, 0.9));
-    }else{
-      if(!dupQueryFiles.length){
-        toast("اختار صور أول"); btn.disabled=false; btn.textContent="ابدأ الفحص"; wrap.style.display="none"; return;
-      }
-      const withEmb=libList.filter(i=>i.aiEmb);
-      const groups=[];
-      for(const file of dupQueryFiles){
-        const qUrl=URL.createObjectURL(file);
-        const qEmb=await computeAIEmbedding(qUrl);
-        if(!qEmb) continue;
-        const matches=withEmb
-          .map(i=>({item:i, sim:cosineSim(qEmb,i.aiEmb)}))
-          .filter(x=>x.sim>=0.88)
-          .sort((a,b)=>b.sim-a.sim)
-          .map(x=>x.item);
-        if(matches.length) groups.push({query:{id:"q_"+uid(), name:file.name, thumbUrl:qUrl, isQuery:true}, matches});
-      }
-      renderDupQueryGroups(groups);
-    }
-    wrap.style.display="none";
-    btn.disabled=false; btn.textContent="ابدأ الفحص";
-  }
-  document.getElementById("dupScanBtn").addEventListener("click", runDupScan);
-  document.getElementById("dupFinderBtn").addEventListener("click", ()=>{
-    document.getElementById("dupResults").innerHTML="";
-    document.getElementById("dupProgressWrap").style.display="none";
-    document.getElementById("dupView").classList.add("open");
-    document.body.style.overflow="hidden";
-  });
-  document.getElementById("dupBack").addEventListener("click", ()=>{
-    document.getElementById("dupView").classList.remove("open");
-    document.body.style.overflow="";
-  });
 
   // similar-grid: chunked + lazy just like the main grid — with an
   // uncapped match list, firing every thumb fetch at once was exactly
@@ -1954,6 +1833,7 @@
     }).length;
     document.getElementById("pMonth").textContent=thisMonth;
     document.getElementById("pAlbums").textContent=albums.length;
+    renderAlbumManage();
     if(navigator.storage && navigator.storage.estimate){
       navigator.storage.estimate().then(est=>{
         document.getElementById("pSize").textContent=fmtSize(est.usage||0);
@@ -1983,7 +1863,7 @@
     if(detailId===id) closeDetail();
     const t=setTimeout(async ()=>{
       pendingDeletes.delete(id);
-      await dbDel(id);
+      await dbDel(id); if(rec.fingerprint) knownFingerprints.delete(rec.fingerprint);
       if(rec.thumbUrl) URL.revokeObjectURL(rec.thumbUrl);
       if(rec.fullUrl) URL.revokeObjectURL(rec.fullUrl);
       images=images.filter(i=>i.id!==id);
@@ -2048,42 +1928,50 @@
     await downloadImage(rec);
     toast("تم التحميل (المشاركة المباشرة غير مدعومة بهالمتصفح)");
   }
-  async function downloadZip(list, filename){
-    if(!list.length) return;
-    if(typeof JSZip==="undefined"){ toast("تعذّر تجهيز أداة الضغط"); return; }
-    toast(`جاري تجهيز ${list.length} صورة بصيغة ZIP…`, {duration:3000});
-    const zip=new JSZip();
-    const used=new Set();
+    async function downloadZip(list, filename){
+    if(!list.length){ toast("ما فيه ملفات"); return; }
+    const base=(filename||"lamha-export.zip").replace(/\.zip$/i,"");
+    const PART_BYTES=1.2*1024*1024*1024;
+    const parts=[]; let cur=[], curBytes=0;
     for(const rec of list){
-      const blob=await ensureFullBlob(rec);
-      if(!blob) continue;
-      let name=rec.name || "image.jpg";
-      if(used.has(name)){
-        const parts=name.split(".");
-        const ext=parts.length>1?parts.pop():"";
-        name=parts.join(".")+"_"+rec.id.slice(-4)+(ext?"."+ext:"");
-      }
-      used.add(name);
-      zip.file(name, blob);
+      const sz=rec.size||0;
+      if(cur.length && (curBytes+sz>PART_BYTES || cur.length>=8000)){ parts.push(cur); cur=[]; curBytes=0; }
+      cur.push(rec); curBytes+=sz;
     }
-    const content=await zip.generateAsync({type:"blob"});
-    const url=URL.createObjectURL(content);
-    const zipName=filename||"lamha-photos.zip";
-    if(isIOSDevice && navigator.canShare){
-      try{
-        const file=new File([content], zipName, {type:"application/zip"});
-        if(navigator.canShare({files:[file]})){
-          await navigator.share({files:[file], title:zipName});
-          setTimeout(()=>URL.revokeObjectURL(url), 4000);
-          return;
+    if(cur.length) parts.push(cur);
+    progressWrap.classList.add("show"); progressFill.style.width="1%";
+    try{
+      for(let pi=0; pi<parts.length; pi++){
+        const recs=parts[pi];
+        const entries=[], items=[], used=new Set();
+        for(const rec of recs){
+          const blob=rec.blob||rec._src||await dbGetBlob(rec.id);
+          if(!blob) continue;
+          const folder=rec.kind==="video"?"videos/":"photos/";
+          const nm=safeFileName(rec.name,rec);
+          let path=folder+nm, n=1;
+          while(used.has(path)){
+            const dot=nm.lastIndexOf(".");
+            path=folder+(dot>0?nm.slice(0,dot)+"_"+(++n)+nm.slice(dot):nm+"_"+(++n));
+          }
+          used.add(path);
+          const alb=rec.albumId?albums.find(a=>a.id===rec.albumId):null;
+          entries.push({name:path, blob, date:rec.date});
+          items.push({file:path, name:rec.name, fav:!!rec.fav, album:alb?alb.name:null, date:rec.date, kind:rec.kind});
         }
-      }catch(e){
-        if(e && e.name==="AbortError"){ setTimeout(()=>URL.revokeObjectURL(url), 4000); return; }
+        entries.push({name:"lamha-manifest.json", blob:new Blob([JSON.stringify({v:1,app:"lamha",items})],{type:"application/json"}), date:Date.now()});
+        toast(parts.length>1?`جاري تجهيز الجزء ${pi+1} من ${parts.length}…`:"جاري تجهيز ملف ZIP…",{duration:2500});
+        const zipBlob=await buildZipBlob(entries,(i,n)=>{ progressFill.style.width=Math.max(1,Math.round(((pi+i/n)/parts.length)*100))+"%"; });
+        const zname=parts.length>1?`${base}-part${pi+1}of${parts.length}.zip`:base+".zip";
+        await saveBlob(zipBlob,zname);
+        if(pi<parts.length-1) await new Promise(r=>setTimeout(r,900));
       }
+      toast(parts.length>1?`تم تجهيز ${parts.length} ملفات ZIP`:"تم تجهيز ملف ZIP",{duration:3500});
+    }catch(e){
+      toast("تعذّر تجهيز ZIP — "+describeErr(e),{duration:6000});
+    }finally{
+      setTimeout(()=>{ progressWrap.classList.remove("show"); progressFill.style.width="0%"; },400);
     }
-    anchorDownload(url, zipName);
-    setTimeout(()=>URL.revokeObjectURL(url), 4000);
-    toast("تم تحميل الملف المضغوط");
   }
 
   // ============================================================
@@ -2091,14 +1979,15 @@
   // A small worker pool handles a few at a time; the grid only
   // re-renders periodically during a big batch, not per file.
   // ============================================================
-  async function fastFingerprint(file){
+    async function fastFingerprint(file){
     try{
+      if(!(window.crypto && crypto.subtle)) throw new Error("no-subtle");
       const chunkSize=Math.min(file.size, 65536);
       const buf=await file.slice(0, chunkSize).arrayBuffer();
       const digest=await crypto.subtle.digest("SHA-256", buf);
       const hex=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join("");
       return file.size+"_"+hex;
-    }catch(e){ return file.size+"_"+file.name; }
+    }catch(e){ return file.size+"_"+(file.name||"")+"_"+(file.lastModified||0); }
   }
   const knownFingerprints=new Set();
 
@@ -2113,212 +2002,239 @@
   // transactions instead of hundreds.
   let writeQueue=[];
   let writeFlushTimer=null;
-  function queueWrite(rec, blob, thumbBlob){
-    // resolves only once actually committed; stores a reference to the live
-    // record (not a frozen snapshot) and writes with put() (upsert) so a
-    // fast favorite/rename right after upload — which does its own dbPut on
-    // this same id — can never race ahead of or get clobbered by this insert;
-    // whichever runs, both read the same up-to-date object.
+    function queueWrite(rec, blob, thumbBlob){
     return new Promise((resolve,reject)=>{
       writeQueue.push({rec, blob, thumbBlob, resolve, reject});
-      if(writeQueue.length>=16) flushWriteQueue();
-      else if(!writeFlushTimer) writeFlushTimer=setTimeout(flushWriteQueue, 200);
+      if(writeQueue.length>=32) flushWriteQueue().catch(()=>{});
+      else if(!writeFlushTimer) writeFlushTimer=setTimeout(()=>{ flushWriteQueue().catch(()=>{}); },120);
     });
   }
-  function flushWriteQueue(){
+    function flushWriteQueue(){
     if(writeFlushTimer){ clearTimeout(writeFlushTimer); writeFlushTimer=null; }
     if(!writeQueue.length) return Promise.resolve();
     const batch=writeQueue.splice(0, writeQueue.length);
     return new Promise((res,rej)=>{
-      const t=db.transaction([STORE,BLOB_STORE,THUMB_STORE],"readwrite");
-      batch.forEach(item=>{
-        t.objectStore(STORE).put(stripForSave(item.rec));
-        t.objectStore(BLOB_STORE).put({id:item.rec.id, blob:item.blob});
-        if(item.thumbBlob) t.objectStore(THUMB_STORE).put({id:item.rec.id, blob:item.thumbBlob});
-      });
-      t.oncomplete=()=>{ batch.forEach(item=>item.resolve()); res(); };
-      t.onerror=()=>{ batch.forEach(item=>item.reject(t.error)); rej(t.error); };
+      const failAll=err=>{ batch.forEach(it=>it.reject(err)); rej(err); };
+      let t;
+      try{
+        t=db.transaction([STORE,BLOB_STORE,THUMB_STORE],"readwrite");
+        batch.forEach(item=>{
+          t.objectStore(STORE).put(stripForSave(item.rec));
+          t.objectStore(BLOB_STORE).put({id:item.rec.id, blob:item.blob});
+          if(item.thumbBlob) t.objectStore(THUMB_STORE).put({id:item.rec.id, blob:item.thumbBlob});
+        });
+      }catch(e){ failAll(e); return; }
+      t.oncomplete=()=>{ batch.forEach(it=>it.resolve()); res(); };
+      t.onerror=()=>failAll(t.error||new Error("TX_ERROR"));
+      t.onabort=()=>failAll(t.error||new Error("TX_ABORT"));
     });
   }
 
-  async function processOneFile(file){
-    const fp=await fastFingerprint(file);
-    if(knownFingerprints.has(fp)) return {duplicate:true};
-    knownFingerprints.add(fp);
-
-    const kind = file.type.startsWith("video/") ? "video" : "image";
-    // videos: skip dims/poster generation during upload entirely — seeking and
-    // decoding a frame is what made bulk video uploads crawl. The blob is saved
-    // immediately (as fast as an image), and the poster/dims are generated once,
-    // lazily, only when that video's thumbnail actually needs to be shown.
-    let dims={w:0,h:0,duration:0}, thumbBlob=null;
-    if(kind==="image"){
-      dims = await getMediaDims(file, kind).catch(()=>({w:0,h:0,duration:0}));
-      thumbBlob = await generateThumb(file, kind).catch(()=>null);
+    async function processOneFile(file, kind, opts){
+    opts=opts||{};
+    // no thumbnail / decode work here anymore: the file is saved as-is and its
+    // thumbnail is made in the background (or the moment it scrolls into view),
+    // which is what makes an upload finish in about a second
+    let fp=null;
+    if(settings.dedupe){
+      fp=await fastFingerprint(file);
+      if(knownFingerprints.has(fp)) return {duplicate:true};
+      knownFingerprints.add(fp);
     }
-    const meta={
-      id:uid(), name:file.name||("file_"+uid()), type:file.type||"application/octet-stream",
-      kind, date:Date.now(), fav:false, size:file.size, fingerprint:fp,
-      width:dims.w||null, height:dims.h||null, duration:dims.duration||null
-    };
-    const withUrl={...meta};
-    if(thumbBlob) withUrl.thumbUrl=URL.createObjectURL(thumbBlob);
-    images.unshift(withUrl); // optimistic — visible in the grid immediately, write happens right after
-    if(kind==="image") ensureSig(withUrl).then(()=>{ if(detailId) renderSimilar(detailId); });
-    await queueWrite(withUrl, file, thumbBlob);
-    return withUrl;
+    try{
+      let dims={w:0,h:0};
+      if(kind==="image") dims=await getImageDimsFast(file);
+      const type=file.type||guessMime(file.name,kind);
+      const blob=file.type?file:new Blob([file],{type});
+      const rec={
+        id:uid(), name:opts.name||file.name||("file_"+uid()), type, kind,
+        date:opts.date||Date.now(), fav:!!opts.fav, size:file.size,
+        width:dims.w||null, height:dims.h||null, duration:null
+      };
+      if(fp) rec.fingerprint=fp;
+      if(opts.albumId) rec.albumId=opts.albumId;
+      rec._src=blob; // lets the thumbnail be made before the DB write has even committed
+      images.unshift(rec);
+      const commit=queueWrite(rec, blob, null).then(()=>{ rec._src=null; });
+      return {rec, fp, commit};
+    }catch(e){ if(fp) knownFingerprints.delete(fp); throw e; }
   }
-  function handleFiles(fileList){
-    const files=Array.from(fileList).filter(f=> f.type.startsWith("image/") || f.type.startsWith("video/"));
-    if(!files.length) return;
-    const total=files.length;
-    let done=0, failed=0, dupes=0;
-    progressWrap.classList.add("show"); progressFill.style.width="1%";
-    toast(total>1 ? `جاري رفع ${total} ملف — يترفعون وحدة وحدة بالخلفية…` : "جاري رفع الملف…");
-    const CONCURRENCY=12;
-    let idx=0;
-    function next(){
-      if(idx>=files.length) return Promise.resolve();
-      const file=files[idx++];
-      return processOneFile(file)
-        .then(res=>{ if(res && res.duplicate) dupes++; })
-        .catch(err=>{ console.error(err); failed++; })
-        .then(()=>{
-          done++;
-          progressFill.style.width=Math.round((done/total)*100)+"%";
-          if(done % 10===0 || done===total) renderGrid();
-        })
-        .then(next);
-    }
-    const runners=[];
-    for(let k=0;k<CONCURRENCY;k++) runners.push(next());
-    Promise.all(runners).then(()=> flushWriteQueue()).then(()=>{
-      renderGrid();
-      setTimeout(()=>{ progressWrap.classList.remove("show"); progressFill.style.width="0%"; }, 400);
-      const added=done-failed-dupes;
-      let msg=`تم رفع ${added} ملف`;
-      if(dupes) msg+=` — تجاهلت ${dupes} مكرّرة`;
-      if(failed) msg+=` — تعذّر رفع ${failed}`;
-      toast(msg);
+    function handleFiles(fileList){
+    if(!db){ toast("التخزين المحلي مو شغّال بهالتطبيق — جرّب زر «فحص التطبيق» بالبروفايل", {duration:7000}); return; }
+    let all=Array.from(fileList||[]);
+    const zips=all.filter(f=>/\.zip$/i.test(f.name||"")||f.type==="application/zip"||f.type==="application/x-zip-compressed");
+    if(zips.length){ all=all.filter(f=>zips.indexOf(f)<0); importZipFiles(zips); }
+    if(!all.length) return;
+    const jobs=[]; let skipped=0; const base=Date.now();
+    all.forEach((f,i)=>{
+      const k=detectKind(f);
+      if(!k){ skipped++; return; }
+      jobs.push(()=>processOneFile(f,k,{date:base-i}));
     });
+    if(!jobs.length){ toast("الملفات المختارة مو صور ولا فيديوهات"); return; }
+    toast(jobs.length>1?`جاري رفع ${jobs.length} ملف…`:"جاري رفع الملف…",{duration:1200});
+    runJobs(jobs,8).then(r=>{ r.skipped=skipped; reportBatch(r); });
   }
 
   // ============================================================
-  // IMPORT FROM URL — scans a page first and shows every image/
-  // video it found so you can pick exactly what to keep before
-  // anything downloads. Tries a direct fetch first, then falls
-  // back automatically through a couple of public CORS relays for
-  // sites that block direct cross-origin access. A handful of
-  // heavily-protected sites can still block every route — that's
-  // a browser security limit (CORS), not something client-side
-  // code can force past. Preview thumbnails inside the picker load
-  // straight from the source (that part is never blocked by CORS,
-  // only actually saving the bytes locally is).
+  // IMPORT FROM URL — every request goes through the user's own local proxy
+  // app (Flask, inside the APK):   GET  {proxy}/?url=<target>
+  // The page is scanned first, everything found is listed, and only what
+  // you tick is saved. Previews are fetched through the proxy too (so
+  // hotlink-protected images still show) and reused for the save.
   // ============================================================
-  const CORS_PROXIES=[
-    u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u),
-    u=>"https://corsproxy.io/?"+encodeURIComponent(u)
-  ];
-  function fetchT(url, opts, ms){
+  const PROXY_DEFAULT="http://127.0.0.1:8080";
+  let proxyBaseMem="";
+  function getProxyBase(){
+    let v=proxyBaseMem;
+    try{ v=localStorage.getItem("lamha.proxy")||v; }catch(e){}
+    v=(v||"").trim()||PROXY_DEFAULT;
+    if(!/^https?:\/\//i.test(v)) v="http://"+v;
+    return v.replace(/\/+$/,"");
+  }
+  function setProxyBase(v){ proxyBaseMem=(v||"").trim(); try{ localStorage.setItem("lamha.proxy",proxyBaseMem); }catch(e){} }
+  function proxyUrl(target){ return getProxyBase()+"/?url="+encodeURIComponent(target); }
+
+  async function proxyGet(target, asType, ms){
     const ctrl=new AbortController();
-    const t=setTimeout(()=>ctrl.abort(), ms||15000);
-    return fetch(url, {...opts, signal:ctrl.signal}).finally(()=>clearTimeout(t));
-  }
-  async function fetchMediaAsBlob(url){
+    const timer=setTimeout(()=>ctrl.abort(), ms||60000);
     try{
-      const resp=await fetchT(url, {mode:"cors", credentials:"omit"});
-      if(resp.ok){
-        const ct=resp.headers.get("content-type")||"";
-        if(ct.startsWith("image/")||ct.startsWith("video/")) return await resp.blob();
+      let resp;
+      try{ resp=await fetch(proxyUrl(target),{signal:ctrl.signal, cache:"no-store"}); }
+      catch(e){ throw new Error(ctrl.signal.aborted?"PROXY_TIMEOUT":"PROXY_DOWN"); }
+      if(!resp.ok){
+        const er=new Error("PROXY_HTTP_"+resp.status); er.status=resp.status;
+        try{ er.detail=((await resp.text())||"").slice(0,140); }catch(e){}
+        throw er;
       }
-    }catch(e){ /* try proxies */ }
-    for(const build of CORS_PROXIES){
-      try{
-        const resp=await fetchT(build(url), {mode:"cors", credentials:"omit"});
-        if(resp.ok){
-          const blob=await resp.blob();
-          if(blob && blob.size>200) return blob;
-        }
-      }catch(e){ /* try next proxy */ }
-    }
-    throw new Error("BLOCKED");
+      if(asType==="text") return await resp.text();
+      const blob=await resp.blob();
+      if(!blob||blob.size<50) throw new Error("EMPTY");
+      return blob;
+    }finally{ clearTimeout(timer); }
   }
-  async function fetchHtml(url){
+  function isProxyDown(e){ return !!e && e.message==="PROXY_DOWN"; }
+  function proxyErrMsg(e){
+    const m=(e&&e.message)||"";
+    if(m==="PROXY_DOWN") return "ما وصلت لتطبيق البروكسي — افتحه وخليه شغّال وتأكد من العنوان ("+getProxyBase()+")";
+    if(m==="PROXY_TIMEOUT"||(e&&e.name==="AbortError")) return "البروكسي تأخر بالرد (الموقع بطيء أو ما يرد)";
+    if(m.indexOf("PROXY_HTTP_")===0) return "الموقع رجّع خطأ "+m.slice(11)+(e.detail?" — "+e.detail:"");
+    if(m==="EMPTY") return "الرد كان فاضي";
+    return describeErr(e);
+  }
+  async function testProxy(){
+    const st=document.getElementById("proxyStatus");
+    st.className="proxy-status"; st.textContent="جاري الفحص…";
+    setProxyBase(document.getElementById("proxyAddrInput").value);
+    const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),6000);
     try{
-      const resp=await fetchT(url, {mode:"cors", credentials:"omit"});
-      if(resp.ok) return await resp.text();
-    }catch(e){ /* try proxies */ }
-    for(const build of CORS_PROXIES){
-      try{
-        const resp=await fetchT(build(url), {mode:"cors", credentials:"omit"});
-        if(resp.ok) return await resp.text();
-      }catch(e){ /* try next proxy */ }
+      const r=await fetch(getProxyBase()+"/",{signal:ctrl.signal,cache:"no-store"});
+      clearTimeout(t);
+      if(r.ok){ st.className="proxy-status ok"; st.textContent="✓ البروكسي شغّال ("+getProxyBase()+")"; }
+      else{ st.className="proxy-status bad"; st.textContent="✗ البروكسي رد بخطأ "+r.status; }
+    }catch(e){
+      clearTimeout(t);
+      st.className="proxy-status bad";
+      st.textContent="✗ ما وصلت للبروكسي — افتح تطبيق البروكسي وتأكد من العنوان";
     }
-    throw new Error("BLOCKED");
   }
+  document.getElementById("proxyTestBtn").addEventListener("click", testProxy);
+
+  const IMG_URL_RE=/\.(jpe?g|png|gif|webp|bmp|avif)(\?|#|$)/i;
+  const VID_URL_RE=/\.(mp4|webm|mov|mkv|m4v)(\?|#|$)/i;
+  function looksLikeDirectMedia(url){ return IMG_URL_RE.test(url)||VID_URL_RE.test(url); }
   function nameFromUrl(url){
     try{
       const clean=url.split("?")[0].split("#")[0];
       const last=decodeURIComponent(clean.split("/").filter(Boolean).pop()||"");
-      return last || ("file_"+uid());
+      return last||("file_"+uid());
     }catch(e){ return "file_"+uid(); }
   }
-  function looksLikeDirectMedia(url){
-    return /\.(jpe?g|png|gif|webp|bmp|avif|mp4|webm|mov|mkv|m4v)(\?|#|$)/i.test(url);
+  function pickSrcset(v){
+    let best=null, bw=-1;
+    String(v||"").split(",").forEach(part=>{
+      const seg=part.trim().split(/\s+/);
+      if(!seg[0]) return;
+      const w=parseFloat((seg[1]||"").replace(/[^\d.]/g,""))||0;
+      if(w>=bw){ bw=w; best=seg[0]; }
+    });
+    return best;
   }
+  const JUNK_RE=/(logo|icon|favicon|sprite|avatar|emoji|gravatar|placeholder|blank|pixel|spinner|loading|1x1)/i;
   function extractMediaFromHtml(html, baseUrl){
     const out=[]; const seen=new Set();
     const add=(src,kind)=>{
       if(!src) return;
+      src=String(src).trim().replace(/\\\//g,"/").replace(/&amp;/g,"&");
+      if(!src||/^(data:|blob:|javascript:)/i.test(src)) return;
       try{
-        const abs=new URL(src, baseUrl).href;
+        const abs=new URL(src,baseUrl).href;
         if(seen.has(abs)) return;
-        seen.add(abs);
-        out.push({url:abs, kind});
+        seen.add(abs); out.push({url:abs,kind});
       }catch(e){}
     };
     try{
-      const doc=new DOMParser().parseFromString(html, "text/html");
-      doc.querySelectorAll("img[src]").forEach(el=> add(el.getAttribute("src"),"image"));
-      doc.querySelectorAll("img[data-src]").forEach(el=> add(el.getAttribute("data-src"),"image"));
-      doc.querySelectorAll("video[src]").forEach(el=> add(el.getAttribute("src"),"video"));
-      doc.querySelectorAll("video source[src]").forEach(el=> add(el.getAttribute("src"),"video"));
+      const doc=new DOMParser().parseFromString(html,"text/html");
+      const baseEl=doc.querySelector("base[href]");
+      if(baseEl){ try{ baseUrl=new URL(baseEl.getAttribute("href"),baseUrl).href; }catch(e){} }
+      const attrs=["src","data-src","data-lazy-src","data-original","data-url","data-full","data-large-file","data-img"];
+      doc.querySelectorAll("img").forEach(el=>{
+        const ss=el.getAttribute("srcset")||el.getAttribute("data-srcset");
+        const best=ss?pickSrcset(ss):null;
+        if(best) add(best,"image");
+        attrs.forEach(a=>{ const v=el.getAttribute(a); if(v) add(v,"image"); });
+      });
+      doc.querySelectorAll("source[srcset]").forEach(el=>{ const b=pickSrcset(el.getAttribute("srcset")); if(b) add(b,"image"); });
+      doc.querySelectorAll("video").forEach(el=>{ add(el.getAttribute("src"),"video"); add(el.getAttribute("data-src"),"video"); });
+      doc.querySelectorAll("video source[src]").forEach(el=>add(el.getAttribute("src"),"video"));
+      doc.querySelectorAll("meta[property='og:image'], meta[name='twitter:image'], link[rel='image_src']").forEach(el=>add(el.getAttribute("content")||el.getAttribute("href"),"image"));
       doc.querySelectorAll("a[href]").forEach(el=>{
-        const href=el.getAttribute("href")||"";
-        if(/\.(jpe?g|png|gif|webp|bmp|avif)(\?|#|$)/i.test(href)) add(href,"image");
-        else if(/\.(mp4|webm|mov|mkv|m4v)(\?|#|$)/i.test(href)) add(href,"video");
+        const hh=el.getAttribute("href")||"";
+        if(IMG_URL_RE.test(hh)) add(hh,"image"); else if(VID_URL_RE.test(hh)) add(hh,"video");
+      });
+      doc.querySelectorAll("[style*='url(']").forEach(el=>{
+        const mm=(el.getAttribute("style")||"").match(/url\(\s*['"]?([^'")]+)['"]?\s*\)/);
+        if(mm) add(mm[1],"image");
       });
     }catch(e){}
-    return out.slice(0,120);
+    // reader-style sites often keep the image list inside inline scripts / JSON
+    try{
+      const flat=html.replace(/\\\//g,"/");
+      const re=/https?:\/\/[^\s"'<>()\\]+?\.(?:jpe?g|png|webp|gif|avif)(?:\?[^\s"'<>()\\]*)?/gi;
+      const rv=/https?:\/\/[^\s"'<>()\\]+?\.(?:mp4|webm|m4v|mov)(?:\?[^\s"'<>()\\]*)?/gi;
+      let mm, guard=0;
+      while((mm=re.exec(flat))&&guard++<600) add(mm[0],"image");
+      while((mm=rv.exec(flat))&&guard++<800) add(mm[0],"video");
+    }catch(e){}
+    return out.slice(0,300);
   }
-  async function addImageFromBlob(blob, name){
-    const fp=await fastFingerprint(blob);
-    if(knownFingerprints.has(fp)) return {duplicate:true};
-    knownFingerprints.add(fp);
-    const kind = (blob.type||"").startsWith("video/") ? "video" : "image";
-    let thumbBlob=null, dims={w:0,h:0,duration:0};
-    if(kind==="image"){
-      dims = await getMediaDims(blob, kind).catch(()=>({w:0,h:0,duration:0}));
-      thumbBlob = await generateThumb(blob, kind).catch(()=>null);
-    }
-    const meta={
-      id:uid(), name: name||("file_"+uid()), type: blob.type||(kind==="video"?"video/mp4":"image/jpeg"),
-      kind, date:Date.now(), fav:false, size:blob.size, fingerprint:fp,
-      width:dims.w||null, height:dims.h||null, duration:dims.duration||null
-    };
-    await dbAddFull(meta, blob, thumbBlob);
-    const withUrl={...meta};
-    if(thumbBlob) withUrl.thumbUrl=URL.createObjectURL(thumbBlob);
-    images.unshift(withUrl);
-    renderGrid();
-    if(kind==="image") ensureSig(withUrl).then(()=>{ if(detailId) renderSimilar(detailId); });
-    return withUrl;
+
+  async function addImageFromBlob(blob, name, opts){
+    opts=opts||{};
+    let kind=opts.kind||((blob.type||"").indexOf("video/")===0?"video":(kindFromName(name)||"image"));
+    let nm=name||("file_"+uid());
+    const mime=(blob.type&&/^(image|video)\//.test(blob.type))?blob.type:guessMime(nm,kind);
+    if(!/\.[A-Za-z0-9]{2,5}$/.test(nm)) nm+="."+(EXT_BY_MIME[mime]||(kind==="video"?"mp4":"jpg"));
+    const file=new File([blob],nm,{type:mime});
+    const r=await processOneFile(file,kind,{});
+    if(r.duplicate) return {duplicate:true};
+    try{ await r.commit; }
+    catch(e){ images=images.filter(i=>i!==r.rec); if(r.fp) knownFingerprints.delete(r.fp); throw e; }
+    if(!opts.noRender) renderGrid();
+    backgroundPasses();
+    return r.rec;
   }
 
   let importCandidates=[];
+  let importObserver=null;
+  const previewLimit=makeLimiter(3);
+
   async function runImportScan(){
-    const url=document.getElementById("importUrlInput").value.trim();
-    if(!url){ toast("حط رابط أول"); return; }
+    const raw=document.getElementById("importUrlInput").value.trim();
+    if(!raw){ toast("حط رابط أول"); return; }
+    let url=raw; if(!/^https?:\/\//i.test(url)) url="https://"+url;
+    if(!db){ toast("التخزين المحلي مو شغّال — جرّب زر «فحص التطبيق» بالبروفايل",{duration:6000}); return; }
+    setProxyBase(document.getElementById("proxyAddrInput").value);
     const btn=document.getElementById("importScanBtn");
     const logWrap=document.getElementById("importLog");
     btn.disabled=true; btn.textContent="جاري البحث…";
@@ -2326,108 +2242,140 @@
     const line=document.createElement("div");
     line.textContent="⏳ "+url;
     logWrap.appendChild(line);
-
-    // a direct media link imports right away — no picker needed for just one file
-    if(looksLikeDirectMedia(url)){
-      try{
-        const blob=await fetchMediaAsBlob(url);
-        const res=await addImageFromBlob(blob, nameFromUrl(url));
-        line.textContent = res && res.duplicate ? "↷ "+url+" — موجودة مسبقًا" : "✓ "+url+" — تم الاستيراد";
-        toast(res && res.duplicate ? "الملف موجود عندك أصلاً" : "تم الاستيراد");
-        btn.disabled=false; btn.textContent="بحث";
-        return;
-      }catch(e){ /* not actually a direct file — fall through to page scan */ }
-    }
-
     try{
-      const html=await fetchHtml(url);
-      const candidates=extractMediaFromHtml(html, url);
-      if(!candidates.length){
-        line.textContent="✗ "+url+" — وصلت الصفحة، بس ما لقيت صور/فيديو بكودها المصدري (غالبًا الموقع يحمّلها عن طريق جافاسكربت بعد التحميل — هذا النوع ما نقدر نوصله لأنه يقرأ الكود الخام بس، بدون تشغيل جافاسكربت الموقع)";
-        btn.disabled=false; btn.textContent="بحث";
+      if(looksLikeDirectMedia(url)){
+        try{
+          const blob=await proxyGet(url,"blob",120000);
+          if(/^(image|video)\//i.test(blob.type||"")){
+            const res=await addImageFromBlob(blob,nameFromUrl(url));
+            line.textContent = res&&res.duplicate ? "↷ "+url+" — موجود عندك أصلاً" : "✓ "+url+" — تم الاستيراد";
+            toast(res&&res.duplicate?"الملف موجود عندك أصلاً":"تم الاستيراد");
+            return;
+          }
+        }catch(e){ if(isProxyDown(e)) throw e; }
+      }
+      const html=await proxyGet(url,"text",45000);
+      const cands=extractMediaFromHtml(html,url);
+      if(!cands.length){
+        line.textContent="✗ "+url+" — وصلت الصفحة بس ما لقيت فيها صور/فيديو (غالبًا الموقع يحمّلها بجافاسكربت بعد الفتح)";
         return;
       }
-      importCandidates=candidates.map(c=>({...c, selected:true}));
+      importCandidates=cands.map(c=>({...c, selected:!JUNK_RE.test(c.url), userTouched:false}));
       logWrap.style.display="none";
       document.getElementById("importStep1").style.display="none";
       document.getElementById("importStep2").style.display="block";
-      document.getElementById("importTitle").textContent=`لقيت ${candidates.length} — اختار وشيل اللي ما تريده`;
+      document.getElementById("importTitle").textContent=`لقيت ${cands.length} — اختار وشيل اللي ما تريده`;
       renderImportResults();
     }catch(e){
-      line.textContent="✗ "+url+" — تعذّر الوصول لهالموقع حتى عبر الوسيط (الموقع يمنع القراءة من متصفح خارجي بشكل كامل)";
+      line.textContent="✗ "+proxyErrMsg(e);
+    }finally{
+      btn.disabled=false; btn.textContent="بحث";
     }
-    btn.disabled=false; btn.textContent="بحث";
+  }
+  function updateImportCount(){
+    const n=importCandidates.filter(c=>c.selected).length;
+    document.getElementById("importResultsCount").textContent=`${n} من ${importCandidates.length} محددة`;
+  }
+  function loadImportPreview(c, cell){
+    if(c.loading||c.previewUrl||c.failed) return;
+    c.loading=true;
+    previewLimit(()=>proxyGet(c.url,"blob",60000)).then(blob=>{
+      if(blob.type && !/^(image|application\/octet-stream)/i.test(blob.type)) throw new Error("NOT_IMAGE");
+      c.blob=blob; c.previewUrl=URL.createObjectURL(blob);
+      const img=cell.querySelector("img");
+      if(img){
+        img.onload=()=>{
+          if(!c.userTouched && img.naturalWidth<100 && img.naturalHeight<100){ c.selected=false; cell.classList.remove("picked"); updateImportCount(); }
+        };
+        img.src=c.previewUrl;
+      }
+      if(!c.userTouched && blob.size<2500){ c.selected=false; cell.classList.remove("picked"); updateImportCount(); }
+    }).catch(()=>{
+      c.failed=true; c.selected=false;
+      cell.classList.remove("picked"); cell.classList.add("failed"); updateImportCount();
+    }).then(()=>{ c.loading=false; });
   }
   function renderImportResults(){
     const wrap=document.getElementById("importResultsGrid");
     wrap.innerHTML="";
+    if(importObserver){ importObserver.disconnect(); importObserver=null; }
+    importObserver=new IntersectionObserver(entries=>{
+      entries.forEach(en=>{
+        if(!en.isIntersecting) return;
+        importObserver.unobserve(en.target);
+        if(en.target._cand) loadImportPreview(en.target._cand, en.target);
+      });
+    },{root:wrap, rootMargin:"300px 0px"});
     importCandidates.forEach(c=>{
       const cell=document.createElement("div");
       cell.className="import-cell"+(c.selected?" picked":"");
-      const media = c.kind==="video" ? document.createElement("video") : document.createElement("img");
-      media.src=c.url;
-      if(c.kind==="video"){ media.muted=true; media.preload="metadata"; }
-      else{ media.loading="lazy"; }
-      cell.appendChild(media);
+      if(c.kind==="video"){
+        cell.innerHTML='<div class="import-vid-tile"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7-11-7z" fill="currentColor"/></svg>فيديو</div>';
+      }else{
+        const img=document.createElement("img");
+        cell.appendChild(img);
+        if(c.previewUrl) img.src=c.previewUrl;
+        else{ cell._cand=c; importObserver.observe(cell); }
+      }
       const check=document.createElement("div");
       check.className="import-check";
-      check.innerHTML=`<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      check.innerHTML='<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       cell.appendChild(check);
-      if(c.kind==="video"){
-        const vb=document.createElement("div");
-        vb.className="import-vid-badge";
-        vb.innerHTML=`<svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7-11-7z" fill="#fff"/></svg>`;
-        cell.appendChild(vb);
-      }
-      cell.addEventListener("click", ()=>{
-        c.selected=!c.selected;
-        cell.classList.toggle("picked", c.selected);
+      cell.addEventListener("click",()=>{
+        if(c.failed) return;
+        c.userTouched=true; c.selected=!c.selected;
+        cell.classList.toggle("picked",c.selected);
         updateImportCount();
       });
       wrap.appendChild(cell);
     });
     updateImportCount();
   }
-  function updateImportCount(){
-    const n=importCandidates.filter(c=>c.selected).length;
-    document.getElementById("importResultsCount").textContent = `${n} من ${importCandidates.length} محددة`;
-  }
-  document.getElementById("importSelectAllBtn").addEventListener("click", ()=>{
-    const allSelected=importCandidates.every(c=>c.selected);
-    importCandidates.forEach(c=>c.selected=!allSelected);
+  document.getElementById("importSelectAllBtn").addEventListener("click",()=>{
+    const live=importCandidates.filter(c=>!c.failed);
+    const all=live.every(c=>c.selected);
+    live.forEach(c=>{ c.selected=!all; c.userTouched=true; });
     renderImportResults();
   });
-  document.getElementById("importBackBtn").addEventListener("click", ()=>{
+  document.getElementById("importBackBtn").addEventListener("click",()=>{
     document.getElementById("importStep2").style.display="none";
     document.getElementById("importStep1").style.display="block";
     document.getElementById("importTitle").textContent="استيراد من رابط موقع";
   });
   document.getElementById("importDownloadSelectedBtn").addEventListener("click", async ()=>{
-    const picked=importCandidates.filter(c=>c.selected);
+    const picked=importCandidates.filter(c=>c.selected&&!c.failed);
     if(!picked.length){ toast("ما حددت شي"); return; }
+    if(!db){ toast("التخزين المحلي مو شغّال — جرّب زر «فحص التطبيق»",{duration:6000}); return; }
     const btn=document.getElementById("importDownloadSelectedBtn");
     const logWrap=document.getElementById("importDownloadLog");
     btn.disabled=true; btn.textContent="جاري التحميل…";
     logWrap.style.display="flex"; logWrap.innerHTML="";
-    let success=0, dup=0, fail=0;
-    for(const c of picked){
-      const line=document.createElement("div");
-      line.textContent="⏳ "+c.url;
-      logWrap.appendChild(line);
-      logWrap.scrollTop=logWrap.scrollHeight;
-      try{
-        const blob=await fetchMediaAsBlob(c.url);
-        const res=await addImageFromBlob(blob, nameFromUrl(c.url));
-        if(res && res.duplicate){ dup++; line.textContent="↷ "+c.url+" — موجودة مسبقًا"; }
-        else{ success++; line.textContent="✓ "+c.url; }
-      }catch(e){ fail++; line.textContent="✗ "+c.url+" — تعذّر التحميل"; }
-      logWrap.scrollTop=logWrap.scrollHeight;
+    let ok=0, dup=0, fail=0, idx=0, firstErr=null;
+    async function worker(){
+      while(idx<picked.length){
+        const c=picked[idx++];
+        const line=document.createElement("div");
+        line.textContent="⏳ "+c.url;
+        logWrap.appendChild(line); logWrap.scrollTop=logWrap.scrollHeight;
+        try{
+          const blob=c.blob||await proxyGet(c.url,"blob",c.kind==="video"?300000:90000);
+          const res=await addImageFromBlob(blob,nameFromUrl(c.url),{kind:c.kind,noRender:true});
+          if(res&&res.duplicate){ dup++; line.textContent="↷ "+c.url+" — موجودة مسبقًا"; }
+          else{ ok++; line.textContent="✓ "+c.url; }
+        }catch(e){
+          fail++; if(!firstErr) firstErr=e;
+          line.textContent="✗ "+c.url+" — "+proxyErrMsg(e);
+        }
+        if((ok+dup+fail)%8===0) renderGrid();
+      }
     }
+    await Promise.all([worker(),worker(),worker()]);
+    renderGrid(); backgroundPasses();
     btn.disabled=false; btn.textContent="تحميل المحدد";
-    let msg=`تم استيراد ${success}`;
-    if(dup) msg+=` — تجاهل ${dup} مكرّرة`;
+    let msg=`تم استيراد ${ok}`;
+    if(dup) msg+=` — تجاهلت ${dup} مكرّرة`;
     if(fail) msg+=` — تعذّر ${fail}`;
-    toast(msg);
+    toast(msg,{duration:fail?6000:3500});
   });
 
   // ============================================================
@@ -2531,6 +2479,10 @@
   const menuCardNewAlbum=document.getElementById("menuCardNewAlbum");
   const menuCardImport=document.getElementById("menuCardImport");
   const menuCardSuggestName=document.getElementById("menuCardSuggestName");
+  const menuCardAdd=document.getElementById("menuCardAdd");
+  const menuCardConfirm=document.getElementById("menuCardConfirm");
+  const menuCardAlbumDelete=document.getElementById("menuCardAlbumDelete");
+  const menuCardDiag=document.getElementById("menuCardDiag");
   const menuFavLabel=document.getElementById("menuFavLabel");
   const renameInput=document.getElementById("renameInput");
 
@@ -2541,6 +2493,10 @@
     menuCardNewAlbum.style.display="none";
     menuCardImport.style.display="none";
     menuCardSuggestName.style.display="none";
+    menuCardAdd.style.display="none";
+    menuCardConfirm.style.display="none";
+    menuCardAlbumDelete.style.display="none";
+    menuCardDiag.style.display="none";
   }
   function openMenu(id){
     menuTargetId=id;
@@ -2550,7 +2506,10 @@
     menuCardDefault.style.display="block";
     menuSheet.classList.add("open");
   }
-  function closeMenu(){ menuSheet.classList.remove("open"); menuTargetId=null; }
+    function closeMenu(){
+    menuSheet.classList.remove("open"); menuTargetId=null;
+    if(confirmResolver){ const r=confirmResolver; confirmResolver=null; r(false); }
+  }
   function openRename(id){
     menuTargetId=id;
     const rec=images.find(i=>i.id===id);
@@ -2667,6 +2626,8 @@
   });
 
   document.getElementById("importUrlBtn").addEventListener("click", ()=>{
+    document.getElementById("proxyAddrInput").value=getProxyBase();
+    document.getElementById("proxyStatus").textContent="";
     document.getElementById("importUrlInput").value="";
     document.getElementById("importLog").style.display="none";
     document.getElementById("importLog").innerHTML="";
@@ -2734,12 +2695,12 @@
   document.getElementById("selMoveBtn").addEventListener("click", ()=>{
     if(selectedIds.size) openAlbumPicker(Array.from(selectedIds));
   });
-  document.getElementById("selDeleteBtn").addEventListener("click", ()=>{
+  document.getElementById("selDeleteBtn").addEventListener("click", async ()=>{
     const ids=Array.from(selectedIds);
     if(!ids.length) return;
-    if(!confirm(`تحذف ${ids.length} ملف؟`)) return;
-    ids.forEach(id=> removeImageSoft(id));
-    exitSelection();
+    if(!(await askConfirm(`تحذف ${ids.length} ملف؟`,"حذف",true))) return;
+    try{ await bulkDeleteImages(ids); }catch(e){ toast("تعذّر الحذف — "+describeErr(e),{duration:5000}); return; }
+    exitSelection(); renderGrid(); toast("تم الحذف");
   });
 
   // ============================================================
@@ -2814,25 +2775,487 @@
   document.getElementById("clearAllBtn").addEventListener("click", async ()=>{
     const list=baseList();
     if(!list.length){ toast("ما فيه صور للحذف"); return; }
-    if(!confirm(`تحذف كل الصور (${list.length})؟ هذا الإجراء ما ينرجع.`)) return;
-    await dbClearAllMedia();
+    if(!(await askConfirm(`تحذف كل الصور (${list.length})؟ هذا الإجراء ما ينرجع.`,"مسح الكل",true))) return;
+    await dbClearAllMedia(); knownFingerprints.clear();
     images.forEach(r=>{ if(r.thumbUrl) URL.revokeObjectURL(r.thumbUrl); if(r.fullUrl) URL.revokeObjectURL(r.fullUrl); });
     images=[];
     renderGrid();
     toast("تم مسح كل الصور");
   });
-
-  document.getElementById("addTabBtn").addEventListener("click", ()=> fileInput.click());
-  document.getElementById("emptyUploadBtn").addEventListener("click", ()=> fileInput.click());
-  fileInput.addEventListener("change", e=>{ handleFiles(e.target.files); fileInput.value=""; });
   ["dragover","drop"].forEach(ev=> window.addEventListener(ev, e=>e.preventDefault()));
   window.addEventListener("drop", e=>{
     if(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
   });
 
+  // ============================================================
+  // v16 — safe upload pipeline, ZIP in/out, album management, in-app confirm
+  // ============================================================
+  const settings={dedupe:true};
+  try{ const _s=JSON.parse(localStorage.getItem("lamha.settings")||"{}"); if(typeof _s.dedupe==="boolean") settings.dedupe=_s.dedupe; }catch(e){}
+  function saveSettings(){ try{ localStorage.setItem("lamha.settings",JSON.stringify(settings)); }catch(e){} }
+  function syncDedupeSeg(){ document.querySelectorAll("#dedupeSeg button").forEach(b=>b.classList.toggle("active",(b.dataset.v==="1")===settings.dedupe)); }
+  document.querySelectorAll("#dedupeSeg button").forEach(b=>b.addEventListener("click",()=>{
+    settings.dedupe=(b.dataset.v==="1"); saveSettings(); syncDedupeSeg();
+    toast(settings.dedupe?"منع التكرار شغّال":"منع التكرار مطفّي");
+  }));
+  syncDedupeSeg();
+
+  const IMG_EXT=/\.(jpe?g|jfif|png|gif|webp|bmp|avif|heic|heif|tiff?)$/i;
+  const VID_EXT=/\.(mp4|m4v|mov|webm|mkv|3gp|3gpp|avi|mts|m2ts|mpe?g|wmv|flv|ogv)$/i;
+  function kindFromName(n){ n=n||""; if(VID_EXT.test(n)) return "video"; if(IMG_EXT.test(n)) return "image"; return null; }
+  // WebView file choosers often hand back files with an EMPTY type — the old
+  // "type must start with image/" filter silently dropped every one of them
+  function detectKind(file){
+    const t=(file.type||"").toLowerCase();
+    if(t.indexOf("video/")===0) return "video";
+    if(t.indexOf("image/")===0) return "image";
+    const k=kindFromName(file.name);
+    if(k) return k;
+    return t?null:"image";
+  }
+  const EXT_BY_MIME={"image/jpeg":"jpg","image/png":"png","image/gif":"gif","image/webp":"webp","image/bmp":"bmp","image/avif":"avif","image/heic":"heic","image/heif":"heif","video/mp4":"mp4","video/quicktime":"mov","video/webm":"webm","video/x-matroska":"mkv","video/3gpp":"3gp","video/x-msvideo":"avi"};
+  const MIME_BY_EXT={jpg:"image/jpeg",jpeg:"image/jpeg",jfif:"image/jpeg",png:"image/png",gif:"image/gif",webp:"image/webp",bmp:"image/bmp",avif:"image/avif",heic:"image/heic",heif:"image/heif",mp4:"video/mp4",m4v:"video/mp4",mov:"video/quicktime",webm:"video/webm",mkv:"video/x-matroska","3gp":"video/3gpp",avi:"video/x-msvideo"};
+  function guessMime(name,kind){
+    const mm=String(name||"").match(/\.([A-Za-z0-9]+)$/);
+    const e=mm?mm[1].toLowerCase():"";
+    return MIME_BY_EXT[e]||(kind==="video"?"video/mp4":"image/jpeg");
+  }
+  function safeFileName(name,rec){
+    let n=String(name||"file").replace(/[\\\/:*?\x22<>|\u0000-\u001f]/g,"_").trim()||"file";
+    if(!/\.[A-Za-z0-9]{2,5}$/.test(n)) n+="."+(EXT_BY_MIME[rec.type]||(rec.kind==="video"?"mp4":"jpg"));
+    return n;
+  }
+  function describeErr(e){
+    const n=((e&&e.name)||"")+" "+((e&&e.message)||"");
+    if(/Quota/i.test(n)) return "المساحة ممتلئة";
+    if(/NOT_ZIP/.test(n)) return "الملف مو ZIP صحيح";
+    if(/NO_INFLATE/.test(n)) return "المتصفح ما يدعم فك ZIP المضغوط";
+    if(/UNSUPPORTED_METHOD/.test(n)) return "نوع ضغط ZIP غير مدعوم";
+    if(/DataClone/i.test(n)) return "المتصفح رفض تخزين الملف";
+    if(/SecurityError|InvalidState/i.test(n)) return "التخزين المحلي ممنوع";
+    return (e&&(e.name||e.message))||"خطأ غير معروف";
+  }
+  function getImageDimsFast(file){
+    return new Promise(resolve=>{
+      let done=false;
+      const url=URL.createObjectURL(file); const img=new Image();
+      const fin=(w,h)=>{ if(done) return; done=true; URL.revokeObjectURL(url); resolve({w:w||0,h:h||0}); };
+      img.onload=()=>fin(img.naturalWidth,img.naturalHeight);
+      img.onerror=()=>fin(0,0);
+      setTimeout(()=>fin(0,0),5000);
+      img.src=url;
+    });
+  }
+  function makeLimiter(n){
+    let active=0; const q=[];
+    return fn=>new Promise((resolve,reject)=>{
+      const run=()=>{
+        active++;
+        Promise.resolve().then(fn).then(resolve,reject).then(()=>{ active--; const nx=q.pop(); if(nx) nx(); });
+      };
+      if(active<n) run(); else q.push(run);
+    });
+  }
+  const imgThumbLimit=makeLimiter(3), vidThumbLimit=makeLimiter(1);
+
+  let bgRunning=false, bgAgain=false;
+  async function backgroundPasses(){
+    if(bgRunning){ bgAgain=true; return; }
+    bgRunning=true;
+    try{ do{ bgAgain=false; await thumbBackfillPass(); await sigBacklogPass(); }while(bgAgain); }
+    finally{ bgRunning=false; }
+  }
+
+  function runJobs(jobs, concurrency){
+    return new Promise(resolve=>{
+      const total=jobs.length;
+      let idx=0, done=0, failed=0, dupes=0, firstErr=null, lastRender=0;
+      const commits=[];
+      progressWrap.classList.add("show"); progressFill.style.width="1%";
+      const onCommitFail=(r,err)=>{
+        failed++; if(!firstErr) firstErr=err;
+        images=images.filter(i=>i!==r.rec);
+        if(r.fp) knownFingerprints.delete(r.fp);
+      };
+      function next(){
+        if(idx>=total) return Promise.resolve();
+        const job=jobs[idx++];
+        return Promise.resolve().then(job)
+          .then(async r=>{
+            if(r&&r.duplicate){ dupes++; return; }
+            if(r&&r.commit){
+              commits.push(r.commit.catch(err=>onCommitFail(r,err)));
+              if(writeQueue.length>=96) await flushWriteQueue().catch(()=>{});
+            }
+          })
+          .catch(err=>{ failed++; if(!firstErr) firstErr=err; console.error(err); })
+          .then(()=>{
+            done++;
+            progressFill.style.width=Math.max(1,Math.round(done/total*100))+"%";
+            const now=Date.now();
+            if(now-lastRender>800){ lastRender=now; renderGrid(); }
+          })
+          .then(next);
+      }
+      const runners=[];
+      for(let k=0;k<Math.min(concurrency,total);k++) runners.push(next());
+      Promise.all(runners)
+        .then(()=>flushWriteQueue().catch(()=>{}))
+        .then(()=>Promise.all(commits))
+        .then(()=>{
+          renderGrid();
+          setTimeout(()=>{ progressWrap.classList.remove("show"); progressFill.style.width="0%"; },350);
+          backgroundPasses();
+          resolve({total,added:total-failed-dupes,failed,dupes,firstErr});
+        });
+    });
+  }
+  function reportBatch(r){
+    let m=`تم رفع ${r.added||0} ملف`;
+    if(r.dupes) m+=` — تجاهلت ${r.dupes} مكرّرة`;
+    if(r.skipped) m+=` — ${r.skipped} مو صور/فيديو`;
+    if(r.failed) m+=` — تعذّر ${r.failed} (${describeErr(r.firstErr)})`;
+    if(r.noMedia) m+=` — ZIP بدون صور/فيديو`;
+    toast(m,{duration:(r.failed||r.noMedia)?7000:3500});
+  }
+
+  // ---------- ZIP (no external library: store-only writer, streaming reader) ----------
+  const CRC_TABLE=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); t[n]=c>>>0; } return t; })();
+  function crcUpdate(crc,buf){ let c=crc; for(let i=0;i<buf.length;i++) c=CRC_TABLE[(c^buf[i])&0xFF]^(c>>>8); return c; }
+  async function crcOfBlob(blob){
+    let crc=0xFFFFFFFF; const CH=4*1024*1024;
+    for(let o=0;o<blob.size;o+=CH){
+      const buf=new Uint8Array(await blob.slice(o,Math.min(o+CH,blob.size)).arrayBuffer());
+      crc=crcUpdate(crc,buf);
+    }
+    return (crc^0xFFFFFFFF)>>>0;
+  }
+  function setBig(dv,o,v){ dv.setUint32(o,v%4294967296,true); dv.setUint32(o+4,Math.floor(v/4294967296),true); }
+  function getBig(dv,o){ return dv.getUint32(o,true)+dv.getUint32(o+4,true)*4294967296; }
+  function dosDateTime(d){
+    const y=Math.max(1980,d.getFullYear());
+    return {time:(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1), date:((y-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate()};
+  }
+  const zipEnc=new TextEncoder();
+  async function buildZipBlob(entries,onProgress){
+    const parts=[], central=[]; let offset=0; const n=entries.length;
+    for(let i=0;i<n;i++){
+      const e=entries[i];
+      const nameBytes=zipEnc.encode(e.name); const size=e.blob.size;
+      const crc=await crcOfBlob(e.blob);
+      const dt=dosDateTime(new Date(e.date||Date.now()));
+      const big=size>=0xFFFFFFFF; const extraLocal=big?20:0;
+      const lh=new DataView(new ArrayBuffer(30+nameBytes.length+extraLocal));
+      lh.setUint32(0,0x04034b50,true); lh.setUint16(4,big?45:20,true); lh.setUint16(6,0x0800,true); lh.setUint16(8,0,true);
+      lh.setUint16(10,dt.time,true); lh.setUint16(12,dt.date,true); lh.setUint32(14,crc,true);
+      lh.setUint32(18,big?0xFFFFFFFF:size,true); lh.setUint32(22,big?0xFFFFFFFF:size,true);
+      lh.setUint16(26,nameBytes.length,true); lh.setUint16(28,extraLocal,true);
+      const u8=new Uint8Array(lh.buffer); u8.set(nameBytes,30);
+      if(big){
+        const p=30+nameBytes.length;
+        lh.setUint16(p,1,true); lh.setUint16(p+2,16,true); setBig(lh,p+4,size); setBig(lh,p+12,size);
+      }
+      parts.push(u8,e.blob);
+      central.push({nameBytes,crc,size,offset,dt,big});
+      offset+=u8.length+size;
+      if(onProgress) onProgress(i+1,n);
+    }
+    const cdStart=offset; let cdSize=0; const cdParts=[];
+    for(const c of central){
+      const offBig=c.offset>=0xFFFFFFFF;
+      const extraLen=(c.big||offBig)?(4+(c.big?16:0)+(offBig?8:0)):0;
+      const dv=new DataView(new ArrayBuffer(46+c.nameBytes.length+extraLen));
+      dv.setUint32(0,0x02014b50,true); dv.setUint16(4,45,true); dv.setUint16(6,extraLen?45:20,true);
+      dv.setUint16(8,0x0800,true); dv.setUint16(10,0,true);
+      dv.setUint16(12,c.dt.time,true); dv.setUint16(14,c.dt.date,true); dv.setUint32(16,c.crc,true);
+      dv.setUint32(20,c.big?0xFFFFFFFF:c.size,true); dv.setUint32(24,c.big?0xFFFFFFFF:c.size,true);
+      dv.setUint16(28,c.nameBytes.length,true); dv.setUint16(30,extraLen,true);
+      dv.setUint16(32,0,true); dv.setUint16(34,0,true); dv.setUint16(36,0,true); dv.setUint32(38,0,true);
+      dv.setUint32(42,offBig?0xFFFFFFFF:c.offset,true);
+      const u=new Uint8Array(dv.buffer); u.set(c.nameBytes,46);
+      if(extraLen){
+        let p=46+c.nameBytes.length;
+        dv.setUint16(p,1,true); dv.setUint16(p+2,extraLen-4,true); p+=4;
+        if(c.big){ setBig(dv,p,c.size); setBig(dv,p+8,c.size); p+=16; }
+        if(offBig){ setBig(dv,p,c.offset); }
+      }
+      cdParts.push(u); cdSize+=u.length;
+    }
+    const total=central.length;
+    const need64=total>=0xFFFF||cdSize>=0xFFFFFFFF||cdStart>=0xFFFFFFFF;
+    const tail=[];
+    if(need64){
+      const z=new DataView(new ArrayBuffer(76));
+      z.setUint32(0,0x06064b50,true); setBig(z,4,44); z.setUint16(12,45,true); z.setUint16(14,45,true);
+      z.setUint32(16,0,true); z.setUint32(20,0,true);
+      setBig(z,24,total); setBig(z,32,total); setBig(z,40,cdSize); setBig(z,48,cdStart);
+      z.setUint32(56,0x07064b50,true); z.setUint32(60,0,true); setBig(z,64,cdStart+cdSize); z.setUint32(72,1,true);
+      tail.push(new Uint8Array(z.buffer));
+    }
+    const ev=new DataView(new ArrayBuffer(22));
+    ev.setUint32(0,0x06054b50,true); ev.setUint16(4,0,true); ev.setUint16(6,0,true);
+    ev.setUint16(8,need64?0xFFFF:total,true); ev.setUint16(10,need64?0xFFFF:total,true);
+    ev.setUint32(12,need64?0xFFFFFFFF:cdSize,true); ev.setUint32(16,need64?0xFFFFFFFF:cdStart,true);
+    ev.setUint16(20,0,true);
+    tail.push(new Uint8Array(ev.buffer));
+    return new Blob([...parts,...cdParts,...tail],{type:"application/zip"});
+  }
+  async function saveBlob(blob,name){
+    const url=URL.createObjectURL(blob);
+    if(isIOSDevice && navigator.canShare){
+      try{
+        const f=new File([blob],name,{type:blob.type||"application/octet-stream"});
+        if(navigator.canShare({files:[f]})){ await navigator.share({files:[f],title:name}); setTimeout(()=>URL.revokeObjectURL(url),60000); return; }
+      }catch(e){ if(e&&e.name==="AbortError") return; }
+    }
+    anchorDownload(url,name);
+    setTimeout(()=>URL.revokeObjectURL(url),120000);
+  }
+  async function readZipEntries(file){
+    const size=file.size;
+    const tailLen=Math.min(size,65557+22);
+    const tail=new Uint8Array(await file.slice(size-tailLen,size).arrayBuffer());
+    let eocd=-1;
+    for(let i=tail.length-22;i>=0;i--){
+      if(tail[i]===0x50&&tail[i+1]===0x4b&&tail[i+2]===0x05&&tail[i+3]===0x06){ eocd=i; break; }
+    }
+    if(eocd<0) throw new Error("NOT_ZIP");
+    const dv=new DataView(tail.buffer);
+    let total=dv.getUint16(eocd+10,true), cdSize=dv.getUint32(eocd+12,true), cdOff=dv.getUint32(eocd+16,true);
+    if(total===0xFFFF||cdSize===0xFFFFFFFF||cdOff===0xFFFFFFFF){
+      const locPos=eocd-20;
+      if(locPos>=0&&dv.getUint32(locPos,true)===0x07064b50){
+        const z64=getBig(dv,locPos+8);
+        const z=new DataView(await file.slice(z64,z64+56).arrayBuffer());
+        if(z.getUint32(0,true)===0x06064b50){ total=getBig(z,32); cdSize=getBig(z,40); cdOff=getBig(z,48); }
+      }
+    }
+    const buf=await file.slice(cdOff,cdOff+cdSize).arrayBuffer();
+    const cd=new DataView(buf); const dec=new TextDecoder("utf-8");
+    const entries=[]; let p=0;
+    for(let i=0;i<total&&p+46<=cd.byteLength;i++){
+      if(cd.getUint32(p,true)!==0x02014b50) break;
+      const flags=cd.getUint16(p+8,true), method=cd.getUint16(p+10,true);
+      let csize=cd.getUint32(p+20,true), usize=cd.getUint32(p+24,true);
+      const nlen=cd.getUint16(p+28,true), elen=cd.getUint16(p+30,true), clen=cd.getUint16(p+32,true);
+      let lho=cd.getUint32(p+42,true);
+      const name=dec.decode(new Uint8Array(buf,p+46,nlen));
+      let ep=p+46+nlen; const eend=ep+elen;
+      while(ep+4<=eend){
+        const id=cd.getUint16(ep,true), sz=cd.getUint16(ep+2,true);
+        if(id===1){
+          let q=ep+4;
+          if(usize===0xFFFFFFFF){ usize=getBig(cd,q); q+=8; }
+          if(csize===0xFFFFFFFF){ csize=getBig(cd,q); q+=8; }
+          if(lho===0xFFFFFFFF){ lho=getBig(cd,q); q+=8; }
+        }
+        ep+=4+sz;
+      }
+      entries.push({name,method,csize,usize,lho,flags,isDir:name.charAt(name.length-1)==="/"});
+      p+=46+nlen+elen+clen;
+    }
+    return entries;
+  }
+  async function extractEntry(file,e,mime){
+    const lh=new DataView(await file.slice(e.lho,e.lho+30).arrayBuffer());
+    if(lh.getUint32(0,true)!==0x04034b50) throw new Error("BAD_ZIP");
+    const start=e.lho+30+lh.getUint16(26,true)+lh.getUint16(28,true);
+    const raw=file.slice(start,start+e.csize);
+    if(e.method===0) return mime?raw.slice(0,raw.size,mime):raw;
+    if(e.method===8){
+      if(typeof DecompressionStream==="undefined") throw new Error("NO_INFLATE");
+      const out=await new Response(raw.stream().pipeThrough(new DecompressionStream("deflate-raw"))).blob();
+      return mime?out.slice(0,out.size,mime):out;
+    }
+    throw new Error("UNSUPPORTED_METHOD");
+  }
+  async function importZipFile(file){
+    const entries=await readZipEntries(file);
+    const mEntry=entries.find(e=>/(^|\/)lamha-manifest\.json$/.test(e.name));
+    const mmap=new Map(); const albumNames=new Set();
+    if(mEntry){
+      try{
+        const man=JSON.parse(await (await extractEntry(file,mEntry)).text());
+        (man.items||[]).forEach(it=>{ if(it&&it.file){ mmap.set(it.file,it); if(it.album) albumNames.add(it.album); } });
+      }catch(e){}
+    }
+    const albumIdByName=new Map();
+    for(const nm of albumNames){
+      let a=albums.find(x=>x.name===nm);
+      if(!a) a=await createAlbum(nm);
+      albumIdByName.set(nm,a.id);
+    }
+    const media=entries.filter(e=>{
+      if(e.isDir||(e.flags&1)) return false;
+      const base=e.name.split("/").pop();
+      if(!base||base.charAt(0)==="."||e.name.indexOf("__MACOSX/")>=0) return false;
+      return !!kindFromName(base);
+    });
+    if(!media.length) return {total:0,added:0,failed:0,dupes:0,firstErr:null};
+    const jobs=media.map(e=>async()=>{
+      const base=e.name.split("/").pop(); const kind=kindFromName(base); const it=mmap.get(e.name);
+      const mime=guessMime(base,kind);
+      const blob=await extractEntry(file,e,mime);
+      const f=new File([blob],base,{type:mime});
+      return processOneFile(f,kind,{
+        name:(it&&it.name)?it.name:base, fav:!!(it&&it.fav),
+        date:(it&&it.date)?it.date:Date.now(),
+        albumId:(it&&it.album)?albumIdByName.get(it.album):null
+      });
+    });
+    return runJobs(jobs,4);
+  }
+  async function importZipFiles(fileList){
+    const zips=Array.from(fileList||[]);
+    if(!zips.length) return;
+    if(!db){ toast("التخزين المحلي مو شغّال — جرّب زر «فحص التطبيق»",{duration:6000}); return; }
+    const tot={added:0,failed:0,dupes:0,firstErr:null,noMedia:0};
+    for(const z of zips){
+      toast(`جاري قراءة ${z.name}…`,{duration:1500});
+      try{
+        const r=await importZipFile(z);
+        tot.added+=r.added; tot.failed+=r.failed; tot.dupes+=r.dupes;
+        if(!r.total) tot.noMedia++;
+        if(r.firstErr&&!tot.firstErr) tot.firstErr=r.firstErr;
+      }catch(e){ tot.failed++; if(!tot.firstErr) tot.firstErr=e; }
+    }
+    reportBatch(tot);
+  }
+
+  // ---------- bulk delete + album management ----------
+  function dbPutMany(recs){
+    return new Promise((res,rej)=>{
+      if(!recs.length){ res(); return; }
+      const t=db.transaction(STORE,"readwrite"); const st=t.objectStore(STORE);
+      recs.forEach(r=>st.put(stripForSave(r)));
+      t.oncomplete=()=>res(); t.onerror=()=>rej(t.error);
+    });
+  }
+  function dbDelAlbum(id){
+    return new Promise((res,rej)=>{ const q=atx("readwrite").delete(id); q.onsuccess=()=>res(); q.onerror=()=>rej(q.error); });
+  }
+  async function bulkDeleteImages(ids){
+    if(!ids.length) return;
+    const set=new Set(ids);
+    await new Promise((res,rej)=>{
+      const t=db.transaction([STORE,BLOB_STORE,THUMB_STORE],"readwrite");
+      ids.forEach(id=>{ t.objectStore(STORE).delete(id); t.objectStore(BLOB_STORE).delete(id); t.objectStore(THUMB_STORE).delete(id); });
+      t.oncomplete=()=>res(); t.onerror=()=>rej(t.error);
+    });
+    images.forEach(r=>{
+      if(!set.has(r.id)) return;
+      if(r.thumbUrl) URL.revokeObjectURL(r.thumbUrl);
+      if(r.fullUrl) URL.revokeObjectURL(r.fullUrl);
+      if(r.fingerprint) knownFingerprints.delete(r.fingerprint);
+    });
+    images=images.filter(r=>!set.has(r.id));
+    if(detailId&&set.has(detailId)) closeDetail();
+  }
+  async function deleteAlbum(id,withMedia){
+    const alb=albums.find(a=>a.id===id); if(!alb) return;
+    const members=images.filter(i=>i.albumId===id);
+    try{
+      if(withMedia) await bulkDeleteImages(members.map(m=>m.id));
+      else if(members.length){ members.forEach(m=>{ m.albumId=null; }); await dbPutMany(members); }
+      await dbDelAlbum(id);
+    }catch(e){ toast("تعذّر حذف المجموعة — "+describeErr(e),{duration:5000}); return; }
+    albums=albums.filter(a=>a.id!==id);
+    if(currentAlbumId===id) currentAlbumId=null;
+    renderAlbumChips(); renderGrid();
+    toast(withMedia?"انحذفت المجموعة مع ملفاتها":"انحذفت المجموعة (الملفات بقت)");
+  }
+  let albumDeleteId=null;
+  function openAlbumDelete(id){
+    const a=albums.find(x=>x.id===id); if(!a) return;
+    albumDeleteId=id;
+    const n=images.filter(i=>i.albumId===id).length;
+    document.getElementById("albumDeleteTitle").textContent=`حذف مجموعة "${a.name}" (${n} ملف)`;
+    hideAllMenuCards(); menuCardAlbumDelete.style.display="block"; menuSheet.classList.add("open");
+  }
+  function renderAlbumManage(){
+    const wrap=document.getElementById("albumManageList"); if(!wrap) return;
+    wrap.innerHTML="";
+    if(!albums.length){
+      wrap.innerHTML='<div class="settings-row"><div class="label">ما عندك مجموعات<small>سوّي وحدة من زر «+ مجموعة» بالرئيسية</small></div></div>';
+      return;
+    }
+    albums.forEach(a=>{
+      const cnt=images.filter(i=>i.albumId===a.id).length;
+      const row=document.createElement("div"); row.className="settings-row";
+      const lab=document.createElement("div"); lab.className="label"; lab.textContent=a.name;
+      const sm=document.createElement("small"); sm.textContent=cnt+" ملف"; lab.appendChild(sm);
+      const btn=document.createElement("button"); btn.className="row-action-btn danger"; btn.textContent="حذف";
+      btn.addEventListener("click",()=>openAlbumDelete(a.id));
+      row.appendChild(lab); row.appendChild(btn); wrap.appendChild(row);
+    });
+  }
+  document.getElementById("albumDelKeep").addEventListener("click", async ()=>{
+    const id=albumDeleteId; closeMenu(); if(id) await deleteAlbum(id,false);
+  });
+  document.getElementById("albumDelAll").addEventListener("click", async ()=>{
+    const id=albumDeleteId; closeMenu(); if(!id) return;
+    const n=images.filter(i=>i.albumId===id).length;
+    if(n>0 && !(await askConfirm(`تحذف ${n} ملف مع المجموعة؟ ما ينرجعون.`,"حذف الكل",true))) return;
+    await deleteAlbum(id,true);
+  });
+  document.getElementById("albumDelCancel").addEventListener("click", closeMenu);
+
+  // ---------- in-app confirm (window.confirm returns false in most WebViews) ----------
+  let confirmResolver=null;
+  function askConfirm(message,okText,danger){
+    return new Promise(resolve=>{
+      if(confirmResolver){ const r=confirmResolver; confirmResolver=null; r(false); }
+      document.getElementById("confirmMsg").textContent=message;
+      const ok=document.getElementById("confirmOk");
+      ok.textContent=okText||"تأكيد"; ok.classList.toggle("danger",!!danger);
+      hideAllMenuCards(); menuCardConfirm.style.display="block"; menuSheet.classList.add("open");
+      confirmResolver=resolve;
+    });
+  }
+  document.getElementById("confirmOk").addEventListener("click",()=>{
+    const r=confirmResolver; confirmResolver=null; menuSheet.classList.remove("open"); if(r) r(true);
+  });
+  document.getElementById("confirmCancel").addEventListener("click",()=>closeMenu());
+
+  // ---------- add sheet + file inputs ----------
+  function openAddSheet(){ hideAllMenuCards(); menuCardAdd.style.display="block"; menuSheet.classList.add("open"); }
+  document.getElementById("addTabBtn").addEventListener("click",openAddSheet);
+  document.getElementById("emptyUploadBtn").addEventListener("click",openAddSheet);
+  ["fileInputImages","fileInputVideos"].forEach(id=>{
+    document.getElementById(id).addEventListener("change",e=>{
+      const files=Array.from(e.target.files||[]); e.target.value=""; closeMenu(); handleFiles(files);
+    });
+  });
+  document.getElementById("fileInputZip").addEventListener("change",e=>{
+    const files=Array.from(e.target.files||[]); e.target.value=""; closeMenu(); importZipFiles(files);
+  });
+  document.getElementById("menuAddFromUrl").addEventListener("click",()=>{ closeMenu(); document.getElementById("importUrlBtn").click(); });
+
+  // ---------- diagnostics ----------
+  async function runDiagnostics(){
+    const L=[]; const ok=(c,t)=>L.push((c?"✓ ":"✗ ")+t);
+    ok(!!db,"التخزين المحلي (IndexedDB)");
+    ok(!!window.isSecureContext,"سياق آمن");
+    ok(!!(window.crypto&&crypto.subtle),"crypto.subtle (لمنع التكرار)");
+    ok(typeof createImageBitmap==="function","createImageBitmap (صور مصغّرة سريعة)");
+    ok(typeof DecompressionStream==="function","فك ضغط ZIP المضغوط");
+    let ls=false; try{ localStorage.setItem("_t","1"); localStorage.removeItem("_t"); ls=true; }catch(e){}
+    ok(ls,"localStorage (حفظ الإعدادات)");
+    try{ if(navigator.storage&&navigator.storage.persisted) ok(await navigator.storage.persisted(),"تخزين دائم (ما ينحذف تلقائي)"); }catch(e){}
+    try{ if(navigator.storage&&navigator.storage.estimate){ const e=await navigator.storage.estimate(); L.push("ℹ المساحة: "+fmtSize(e.usage||0)+" مستخدمة من "+fmtSize(e.quota||0)); } }catch(e){}
+    L.push("ℹ "+(/; wv\)/.test(navigator.userAgent)?"يشتغل داخل WebView (تطبيق)":"يشتغل داخل متصفح عادي"));
+    L.push("ℹ عنوان البروكسي: "+getProxyBase());
+    L.push("ℹ اختيار الملفات داخل التطبيق يحتاج الـAPK يدعم file chooser — هذا ما أقدر أفحصه من الكود");
+    document.getElementById("diagOut").textContent=L.join("\n");
+    hideAllMenuCards(); menuCardDiag.style.display="block"; menuSheet.classList.add("open");
+  }
+  document.getElementById("diagBtn").addEventListener("click",runDiagnostics);
+  document.getElementById("diagClose").addEventListener("click",closeMenu);
+
   (async function init(){
     try{
       db=await openDB();
+      try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
       const stored=await dbAll();
       stored.sort((a,b)=>b.date-a.date);
       images=stored;
@@ -2840,10 +3263,10 @@
       albums=await dbAllAlbums();
       renderAlbumChips();
       renderGrid();
-      setTimeout(()=>{ thumbBackfillPass().then(sigBacklogPass); }, 1200);
+      setTimeout(backgroundPasses, 1200);
     }catch(err){
       console.error(err);
-      toast("تعذّر فتح قاعدة البيانات المحلية");
+      toast("تعذّر فتح التخزين المحلي — الرفع ما راح يشتغل (فعّل DOM Storage بالـWebView أو افتح الموقع بالمتصفح)",{duration:9000});
     }
   })();
 
