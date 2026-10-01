@@ -451,6 +451,11 @@
   .proxy-status.ok{ color:#2ecc71; }
   .proxy-status.bad{ color:#ff6a5c; }
   .import-cell.failed{ opacity:.22; }
+  .import-hd-badge{
+    position:absolute; top:3px; left:3px; background:var(--red); color:#fff; font-size:9px; font-weight:800;
+    border-radius:5px; padding:1px 4px; display:none; align-items:center; justify-content:center;
+  }
+  .import-unverified{ color:#ffb36b; margin-right:4px; }
   .import-vid-tile{ height:90px; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--ink-dim); gap:6px; }
 </style>
 </head>
@@ -579,7 +584,7 @@
       </div>
       <div class="settings-row">
         <div class="label">استيراد ملف ZIP<small>ملف نزّلته من الموقع — يرجّع المجموعات والمفضّلة</small></div>
-        <label class="row-action-btn" for="fileInputZip">استيراد</label>
+        <button class="row-action-btn" id="settingsZipBtn">استيراد</button>
       </div>
       <div class="settings-row">
         <div class="label">فحص التطبيق<small>يبين إذا التخزين والميزات شغّالة</small></div>
@@ -736,18 +741,18 @@
 
   <div class="menu-card" id="menuCardAdd" style="display:none;">
     <div class="menu-title">إضافة إلى المعرض</div>
-    <label class="menu-item" for="fileInputImages">
+    <button class="menu-item" id="menuPickImages">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="10" r="1.7" fill="currentColor"/><path d="M4 18l5-5 4 4 3-3 4 4" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
       رفع صور
-    </label>
-    <label class="menu-item" for="fileInputVideos">
+    </button>
+    <button class="menu-item" id="menuPickVideos">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M10 9.5v5l4.5-2.5L10 9.5z" fill="currentColor"/></svg>
       رفع فيديوهات
-    </label>
-    <label class="menu-item" for="fileInputZip">
+    </button>
+    <button class="menu-item" id="menuPickZip">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6V3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M11 6v2m0 2v2m0 2v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       استيراد ملف ZIP
-    </label>
+    </button>
     <button class="menu-item" id="menuAddFromUrl">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 15l6-6M10 7l1.5-1.5a3 3 0 014.24 4.24L14 11.5M14 9l-1.5 1.5a3 3 0 01-4.24-4.24L9.5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       استيراد من رابط موقع
@@ -800,7 +805,7 @@
         <input type="text" id="importUrlInput" placeholder="رابط صفحة، أو رابط صورة/فيديو مباشر">
       </div>
       <div class="import-note">
-        الاستيراد كله يمرّ عبر تطبيق البروكسي اللي عندك (داخل الـAPK). افتح تطبيق البروكسي وخليه شغّال، بعدين الصق رابط الموقع — بتشوف كل الصور والفيديوهات اللي بالصفحة وتختار اللي تريده قبل التنزيل.
+        يبحث بالصفحة، وإذا كل صورة فيها مرتبطة بصفحتها الخاصة (مواقع المعارض المعروفة) يروح بالخلفية لصفحة كل صورة ويجيب نسختها الأصلية عالية الجودة بدل المصغّرة — يبين شعار HD عليها لما يخلص. مواقع فيها حماية، أو تحمّل صورها بجافاسكربت بعد الفتح، ممكن ما تنلقى فيها شي — قيد تقني بالمتصفح نفسه. منصات فيديو كبيرة (يوتيوب وأشباهها) ما مدعومة عمدًا — تنزيل الفيديو منها يخالف شروط استخدامها.
       </div>
       <div class="proxy-row">
         <input type="text" id="proxyAddrInput" placeholder="http://127.0.0.1:8080" dir="ltr">
@@ -1065,7 +1070,7 @@
           URL.revokeObjectURL(url); resolve(r);
         };
         timer=setTimeout(()=>fin(null),15000);
-        v.onloadeddata=()=>{ try{ v.currentTime=Math.min(0.8,(v.duration||1)/2); }catch(e){ fin(null); } };
+        v.onloadedmetadata=()=>{ try{ v.currentTime=Math.min(1.5,(v.duration||1)/2); }catch(e){ fin(null); } };
         v.onseeked=()=>{
           try{
             const w=v.videoWidth||MAX, h=v.videoHeight||MAX, dur=v.duration||0;
@@ -1892,7 +1897,9 @@
       a.href=url; a.download=name||"file"; a.rel="noopener";
       document.body.appendChild(a); a.click(); a.remove();
     }catch(e){
-      try{ window.open(url, "_blank"); }catch(e2){}
+      try{ window.open(url, "_blank"); }catch(e2){
+        toast("تعذّر حفظ الملف — إذن التخزين هذا يتحكم فيه تطبيق الـAPK نفسه (الجزء الأصلي، مو هذا الكود) من إعدادات الجهاز ← التطبيقات ← الصلاحيات",{duration:8000});
+      }
     }
   }
   async function downloadImage(rec){
@@ -2059,21 +2066,26 @@
       return {rec, fp, commit};
     }catch(e){ if(fp) knownFingerprints.delete(fp); throw e; }
   }
-    function handleFiles(fileList){
+  function handleFiles(fileList){
     if(!db){ toast("التخزين المحلي مو شغّال بهالتطبيق — جرّب زر «فحص التطبيق» بالبروفايل", {duration:7000}); return; }
     let all=Array.from(fileList||[]);
+    if(!all.length){ toast("ما وصلت أي ملفات من منتقي الملفات"); return; }
     const zips=all.filter(f=>/\.zip$/i.test(f.name||"")||f.type==="application/zip"||f.type==="application/x-zip-compressed");
     if(zips.length){ all=all.filter(f=>zips.indexOf(f)<0); importZipFiles(zips); }
     if(!all.length) return;
-    const jobs=[]; let skipped=0; const base=Date.now();
+    const jobs=[]; const rejected=[]; const base=Date.now();
     all.forEach((f,i)=>{
       const k=detectKind(f);
-      if(!k){ skipped++; return; }
+      if(!k){ rejected.push(f); return; }
       jobs.push(()=>processOneFile(f,k,{date:base-i}));
     });
-    if(!jobs.length){ toast("الملفات المختارة مو صور ولا فيديوهات"); return; }
-    toast(jobs.length>1?`جاري رفع ${jobs.length} ملف…`:"جاري رفع الملف…",{duration:1200});
-    runJobs(jobs,8).then(r=>{ r.skipped=skipped; reportBatch(r); });
+    if(!jobs.length){
+      const sample=rejected.slice(0,3).map(f=>`"${f.name||"?"}" (${f.type||"بدون type"})`).join("، ");
+      toast(`ما قبلت أي ملف — الأمثلة: ${sample}${rejected.length>3?" …":""}. جرّب زر «فحص التطبيق»`,{duration:9000});
+      return;
+    }
+    toast(jobs.length>1?`جاري رفع ${jobs.length} ملف — يترفعون وحدة وحدة بالخلفية…`:"جاري رفع الملف…",{duration:1200});
+    runJobs(jobs,8).then(r=>{ r.skipped=rejected.length; reportBatch(r); });
   }
 
   // ============================================================
@@ -2162,54 +2174,94 @@
   }
   const JUNK_RE=/(logo|icon|favicon|sprite|avatar|emoji|gravatar|placeholder|blank|pixel|spinner|loading|1x1)/i;
   function extractMediaFromHtml(html, baseUrl){
-    const out=[]; const seen=new Set();
-    const add=(src,kind)=>{
+    const out=[]; const seen=new Set(); const posterUrls=new Set();
+    const add=(src,kind,extra)=>{
       if(!src) return;
       src=String(src).trim().replace(/\\\//g,"/").replace(/&amp;/g,"&");
       if(!src||/^(data:|blob:|javascript:)/i.test(src)) return;
       try{
         const abs=new URL(src,baseUrl).href;
         if(seen.has(abs)) return;
-        seen.add(abs); out.push({url:abs,kind});
+        seen.add(abs); out.push(Object.assign({url:abs,kind},extra||{}));
       }catch(e){}
     };
+    let taggedAny=false;
     try{
       const doc=new DOMParser().parseFromString(html,"text/html");
       const baseEl=doc.querySelector("base[href]");
       if(baseEl){ try{ baseUrl=new URL(baseEl.getAttribute("href"),baseUrl).href; }catch(e){} }
+
+      doc.querySelectorAll("video[poster]").forEach(el=>{
+        try{ posterUrls.add(new URL(el.getAttribute("poster"),baseUrl).href); }catch(e){}
+      });
+
       const attrs=["src","data-src","data-lazy-src","data-original","data-url","data-full","data-large-file","data-img"];
       doc.querySelectorAll("img").forEach(el=>{
         const ss=el.getAttribute("srcset")||el.getAttribute("data-srcset");
         const best=ss?pickSrcset(ss):null;
-        if(best) add(best,"image");
-        attrs.forEach(a=>{ const v=el.getAttribute(a); if(v) add(v,"image"); });
+        let detailPageUrl=null;
+        const link=el.closest("a[href]");
+        if(link){
+          try{
+            const href=new URL(link.getAttribute("href"),baseUrl).href;
+            if(!looksLikeDirectMedia(href)) detailPageUrl=href;
+          }catch(e){}
+        }
+        const extra=detailPageUrl?{detailPageUrl}:null;
+        if(best){ add(best,"image",extra); taggedAny=true; }
+        attrs.forEach(a=>{ const v=el.getAttribute(a); if(v){ add(v,"image",extra); taggedAny=true; } });
       });
-      doc.querySelectorAll("source[srcset]").forEach(el=>{ const b=pickSrcset(el.getAttribute("srcset")); if(b) add(b,"image"); });
-      doc.querySelectorAll("video").forEach(el=>{ add(el.getAttribute("src"),"video"); add(el.getAttribute("data-src"),"video"); });
-      doc.querySelectorAll("video source[src]").forEach(el=>add(el.getAttribute("src"),"video"));
-      doc.querySelectorAll("meta[property='og:image'], meta[name='twitter:image'], link[rel='image_src']").forEach(el=>add(el.getAttribute("content")||el.getAttribute("href"),"image"));
+      doc.querySelectorAll("source[srcset]").forEach(el=>{ const b=pickSrcset(el.getAttribute("srcset")); if(b){ add(b,"image"); taggedAny=true; } });
+      doc.querySelectorAll("video").forEach(el=>{
+        if(el.getAttribute("src")){ add(el.getAttribute("src"),"video"); taggedAny=true; }
+        if(el.getAttribute("data-src")){ add(el.getAttribute("data-src"),"video"); taggedAny=true; }
+      });
+      doc.querySelectorAll("video source[src]").forEach(el=>{ add(el.getAttribute("src"),"video"); taggedAny=true; });
+      doc.querySelectorAll("meta[property='og:image'], meta[name='twitter:image'], link[rel='image_src']").forEach(el=>{ add(el.getAttribute("content")||el.getAttribute("href"),"image"); taggedAny=true; });
       doc.querySelectorAll("a[href]").forEach(el=>{
         const hh=el.getAttribute("href")||"";
-        if(IMG_URL_RE.test(hh)) add(hh,"image"); else if(VID_URL_RE.test(hh)) add(hh,"video");
+        if(IMG_URL_RE.test(hh)){ add(hh,"image"); taggedAny=true; }
+        else if(VID_URL_RE.test(hh)){ add(hh,"video"); taggedAny=true; }
       });
       doc.querySelectorAll("[style*='url(']").forEach(el=>{
-        const mm=(el.getAttribute("style")||"").match(/url\(\s*['"]?([^'")]+)['"]?\s*\)/);
-        if(mm) add(mm[1],"image");
+        const mm=(el.getAttribute("style")||"").match(/url\\(\\s*['"]?([^'")]+)['"]?\\s*\\)/);
+        if(mm){ add(mm[1],"image"); taggedAny=true; }
       });
     }catch(e){}
-    // reader-style sites often keep the image list inside inline scripts / JSON
+
+    for(let i=out.length-1;i>=0;i--){ if(out[i].kind==="image" && posterUrls.has(out[i].url)) out.splice(i,1); }
+
+    if(!taggedAny || out.length===0){
+      try{
+        const flat=html.replace(/\\\//g,"/");
+        const re=/https?:\/\/[^\s"'<>()\\]+?\.(?:jpe?g|png|webp|gif|avif)(?:\?[^\s"'<>()\\]*)?/gi;
+        const rv=/https?:\/\/[^\s"'<>()\\]+?\.(?:mp4|webm|m4v|mov)(?:\?[^\s"'<>()\\]*)?/gi;
+        let mm, guard=0;
+        while((mm=re.exec(flat))&&guard++<300) add(mm[0],"image",{unverified:true});
+        while((mm=rv.exec(flat))&&guard++<400) add(mm[0],"video",{unverified:true});
+      }catch(e){}
+    }
+    return dedupeCandidates(out).slice(0,300);
+  }
+  function mediaKeyFor(url){
     try{
-      const flat=html.replace(/\\\//g,"/");
-      const re=/https?:\/\/[^\s"'<>()\\]+?\.(?:jpe?g|png|webp|gif|avif)(?:\?[^\s"'<>()\\]*)?/gi;
-      const rv=/https?:\/\/[^\s"'<>()\\]+?\.(?:mp4|webm|m4v|mov)(?:\?[^\s"'<>()\\]*)?/gi;
-      let mm, guard=0;
-      while((mm=re.exec(flat))&&guard++<600) add(mm[0],"image");
-      while((mm=rv.exec(flat))&&guard++<800) add(mm[0],"video");
-    }catch(e){}
-    return out.slice(0,300);
+      const u=new URL(url);
+      let p=u.pathname.replace(/-\\d{2,4}x\\d{2,4}(?=\\.[a-z0-9]+$)/i,"")
+                       .replace(/[-_](thumb|thumbnail|small|medium|large|preview|mini)(?=\\.[a-z0-9]+$)/i,"");
+      return u.hostname+p;
+    }catch(e){ return url; }
+  }
+  function dedupeCandidates(list){
+    const byKey=new Map();
+    list.forEach(c=>{
+      const k=mediaKeyFor(c.url);
+      const prev=byKey.get(k);
+      if(!prev || (prev.unverified && !c.unverified) || c.url.length>prev.url.length) byKey.set(k,c);
+    });
+    return Array.from(byKey.values());
   }
 
-  async function addImageFromBlob(blob, name, opts){
+    async function addImageFromBlob(blob, name, opts){
     opts=opts||{};
     let kind=opts.kind||((blob.type||"").indexOf("video/")===0?"video":(kindFromName(name)||"image"));
     let nm=name||("file_"+uid());
@@ -2228,6 +2280,7 @@
   let importCandidates=[];
   let importObserver=null;
   const previewLimit=makeLimiter(3);
+  const upgradeLimit=makeLimiter(2);
 
   async function runImportScan(){
     const raw=document.getElementById("importUrlInput").value.trim();
@@ -2266,6 +2319,7 @@
       document.getElementById("importStep2").style.display="block";
       document.getElementById("importTitle").textContent=`لقيت ${cands.length} — اختار وشيل اللي ما تريده`;
       renderImportResults();
+      upgradeCandidatesQuality(importCandidates);
     }catch(e){
       line.textContent="✗ "+proxyErrMsg(e);
     }finally{
@@ -2309,13 +2363,20 @@
     importCandidates.forEach(c=>{
       const cell=document.createElement("div");
       cell.className="import-cell"+(c.selected?" picked":"");
+      cell.dataset.candUrl=c.originalThumbUrl||c.url;
       if(c.kind==="video"){
-        cell.innerHTML='<div class="import-vid-tile"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7-11-7z" fill="currentColor"/></svg>فيديو</div>';
+        cell.innerHTML='<div class="import-vid-tile"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7-11-7z" fill="currentColor"/></svg>فيديو'+(c.unverified?'<span class="import-unverified">؟</span>':'')+'</div>';
       }else{
         const img=document.createElement("img");
         cell.appendChild(img);
         if(c.previewUrl) img.src=c.previewUrl;
         else{ cell._cand=c; importObserver.observe(cell); }
+      }
+      if(c.detailPageUrl && c.kind==="image"){
+        const badge=document.createElement("div");
+        badge.className="import-hd-badge"; badge.textContent="HD";
+        badge.style.display=c.upgraded?"flex":"none";
+        cell.appendChild(badge);
       }
       const check=document.createElement("div");
       check.className="import-check";
@@ -2342,6 +2403,64 @@
     document.getElementById("importStep1").style.display="block";
     document.getElementById("importTitle").textContent="استيراد من رابط موقع";
   });
+  function absoluteBiggest(list){
+    let best=null, bestScore=-1;
+    list.forEach(c=>{
+      if(JUNK_RE.test(c.url)) return;
+      const score=(c.w&&c.h)?c.w*c.h:(c.sameFamily?1:0);
+      if(score>bestScore){ bestScore=score; best=c.url; }
+    });
+    return best;
+  }
+  function findHiResOnDetailPage(html, pageUrl, thumbUrl){
+    try{
+      const doc=new DOMParser().parseFromString(html,"text/html");
+      const og=doc.querySelector("meta[property='og:image']");
+      if(og && og.getAttribute("content")){
+        try{ return new URL(og.getAttribute("content"),pageUrl).href; }catch(e){}
+      }
+      const thumbKey=mediaKeyFor(thumbUrl);
+      const cands=[];
+      doc.querySelectorAll("img").forEach(el=>{
+        const ss=el.getAttribute("srcset"); const best=ss?pickSrcset(ss):null;
+        const src=best||el.getAttribute("src")||el.getAttribute("data-src");
+        if(!src) return;
+        let abs; try{ abs=new URL(src,pageUrl).href; }catch(e){ return; }
+        if(JUNK_RE.test(abs)) return;
+        const w=parseInt(el.getAttribute("width")||0,10)||0;
+        const h=parseInt(el.getAttribute("height")||0,10)||0;
+        cands.push({url:abs,w,h,sameFamily:mediaKeyFor(abs)===thumbKey});
+      });
+      const sameFamily=cands.filter(c=>c.sameFamily);
+      if(sameFamily.length) return absoluteBiggest(sameFamily);
+      if(cands.length) return absoluteBiggest(cands);
+    }catch(e){}
+    return null;
+  }
+  function upgradeCandidatesQuality(list){
+    const targets=list.filter(c=>c.kind==="image" && c.detailPageUrl && !c.unverified);
+    if(!targets.length) return;
+    Promise.all(targets.map(c=>upgradeLimit(async ()=>{
+      try{
+        const html=await proxyGet(c.detailPageUrl,"text",20000);
+        const hi=findHiResOnDetailPage(html,c.detailPageUrl,c.url);
+        if(hi && mediaKeyFor(hi)===mediaKeyFor(c.url) && hi!==c.url){
+          const oldUrl=c.url;
+          c.originalThumbUrl=oldUrl; c.url=hi; c.upgraded=true;
+          c.blob=null; c.previewUrl=null; c.loading=false; c.failed=false;
+          const cell=document.querySelector(`.import-cell[data-cand-url="${CSS.escape(oldUrl)}"]`);
+          if(cell){
+            cell.dataset.candUrl=hi;
+            const badge=cell.querySelector(".import-hd-badge");
+            if(badge) badge.style.display="flex";
+            const img=cell.querySelector("img");
+            if(img){ img.removeAttribute("src"); loadImportPreview(c,cell); }
+          }
+        }
+      }catch(e){ /* keep whichever thumbnail we already have — never block on this */ }
+    }))).catch(()=>{});
+  }
+
   document.getElementById("importDownloadSelectedBtn").addEventListener("click", async ()=>{
     const picked=importCandidates.filter(c=>c.selected&&!c.failed);
     if(!picked.length){ toast("ما حددت شي"); return; }
@@ -3221,13 +3340,26 @@
   function openAddSheet(){ hideAllMenuCards(); menuCardAdd.style.display="block"; menuSheet.classList.add("open"); }
   document.getElementById("addTabBtn").addEventListener("click",openAddSheet);
   document.getElementById("emptyUploadBtn").addEventListener("click",openAddSheet);
+  function openPicker(inputId){
+    closeMenu();
+    const el=document.getElementById(inputId);
+    setTimeout(()=>{ try{ el.click(); }catch(e){ toast("تعذّر فتح منتقي الملفات — "+describeErr(e),{duration:6000}); } },80);
+  }
+  document.getElementById("menuPickImages").addEventListener("click",()=>openPicker("fileInputImages"));
+  document.getElementById("menuPickVideos").addEventListener("click",()=>openPicker("fileInputVideos"));
+  document.getElementById("menuPickZip").addEventListener("click",()=>openPicker("fileInputZip"));
+  document.getElementById("settingsZipBtn").addEventListener("click",()=>openPicker("fileInputZip"));
   ["fileInputImages","fileInputVideos"].forEach(id=>{
     document.getElementById(id).addEventListener("change",e=>{
-      const files=Array.from(e.target.files||[]); e.target.value=""; closeMenu(); handleFiles(files);
+      const files=Array.from(e.target.files||[]); e.target.value="";
+      if(!files.length){ toast("ما وصل أي ملف من منتقي الملفات — جرّب زر «فحص التطبيق» بالبروفايل",{duration:6000}); return; }
+      handleFiles(files);
     });
   });
   document.getElementById("fileInputZip").addEventListener("change",e=>{
-    const files=Array.from(e.target.files||[]); e.target.value=""; closeMenu(); importZipFiles(files);
+    const files=Array.from(e.target.files||[]); e.target.value="";
+    if(!files.length){ toast("ما وصل أي ملف"); return; }
+    importZipFiles(files);
   });
   document.getElementById("menuAddFromUrl").addEventListener("click",()=>{ closeMenu(); document.getElementById("importUrlBtn").click(); });
 
